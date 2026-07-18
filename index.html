@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>魔改造イビルジョー v2 ─ 全部喰い</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --f0:#0B120F; --f1:#121D18; --f2:#1B2A23; --f3:#2A3E34;
+    --ink:#E6EFE9; --i2:#8FAB9C; --i3:#5C7568;
+    --gold:#E8C468; --mist:#E8A0C8; --bone:#9B8FC7;
+    --up:#E0645A; --dn:#5FA8D3; --spot:#F0E4A8; --ok:#9BE88A;
+    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --disp:'Shippori Mincho',serif;
+    --body:system-ui,-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--f0);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+  body{background:radial-gradient(120% 50% at 50% -8%, rgba(232,196,104,.06), transparent 60%), var(--f0);
+    min-height:100vh;padding:0 0 50px}
+  .w{max-width:720px;margin:0 auto;padding:0 14px}
+  header{padding:17px 0 0}
+  .br{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  h1{font-family:var(--disp);font-weight:800;font-size:18.5px;letter-spacing:.05em}
+  .sb{font-family:var(--mono);font-size:8.5px;color:var(--i3);letter-spacing:.13em;text-transform:uppercase}
+  .tb{display:flex;margin-top:12px;border-bottom:1px solid var(--f2);overflow-x:auto}
+  .tb button{background:none;border:0;border-bottom:2px solid transparent;color:var(--i3);
+    font-family:var(--disp);font-size:12.5px;letter-spacing:.05em;padding:9px 12px;cursor:pointer;white-space:nowrap;transition:.18s}
+  .tb button[aria-selected="true"]{color:var(--gold);border-bottom-color:var(--gold)}
+  .tb button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+  .bar{display:flex;gap:7px;padding:10px 0;align-items:center;flex-wrap:wrap}
+  button.b,select{background:transparent;border:1px solid var(--f3);color:var(--i2);border-radius:2px;
+    font-family:var(--mono);font-size:11px;padding:6px 10px;cursor:pointer;transition:.18s}
+  select{background:var(--f1);color:var(--ink)}
+  button.b:hover{color:var(--ink);border-color:var(--i3)}
+  button.b:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+  .rt{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--i3);text-align:right;line-height:1.5}
+  .rt b{color:var(--ok)} .rt i{color:var(--up);font-style:normal}
+
+  .pane{display:none} .pane.act{display:block}
+  .p{border:1px solid var(--f2);border-radius:2px;background:var(--f1);margin-bottom:11px}
+  .ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 12px;border-bottom:1px solid var(--f2)}
+  .pt{font-family:var(--disp);font-weight:600;font-size:12.5px;letter-spacing:.05em}
+  .lg{font-family:var(--mono);font-size:8.5px;color:var(--i3);display:flex;gap:8px;flex-wrap:wrap}
+  .lg i{display:inline-block;width:6px;height:6px;margin-right:3px}
+  .ch{padding:6px 3px 3px}
+  svg{display:block;width:100%;height:auto}
+  .nt{padding:0 12px 9px;font-size:10px;color:var(--i3);line-height:1.6}
+  .dead{padding:9px 12px;font-size:10px;color:var(--up);line-height:1.6;border-top:1px solid var(--f2)}
+
+  .hero{padding:14px 12px}
+  .lb{font-family:var(--mono);font-size:8px;letter-spacing:.13em;color:var(--i3);text-transform:uppercase;margin-bottom:4px}
+  .big{font-family:var(--mono);font-weight:700;font-size:clamp(23px,6.8vw,32px);line-height:1;color:var(--spot)}
+  .big .u{font-size:10.5px;font-weight:400;color:var(--i3);margin-left:4px}
+  .dl{font-family:var(--mono);font-size:10.5px;margin-top:5px}
+  .gr{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--f2);border-top:1px solid var(--f2)}
+  .c{background:var(--f1);padding:10px 11px}
+  .c .k{font-size:10px;color:var(--i2);margin-bottom:3px}
+  .c .v{font-family:var(--mono);font-weight:700;font-size:14.5px;line-height:1.15}
+  .c .d{font-family:var(--mono);font-size:9px;color:var(--i3);margin-top:3px}
+  .pos{color:var(--up)} .neg{color:var(--dn)} .nu{color:var(--i2)}
+  .gd{color:var(--gold)} .mt{color:var(--mist)} .bn{color:var(--bone)} .okc{color:var(--ok)}
+  textarea{width:100%;background:var(--f0);border:1px solid var(--f3);color:var(--i2);
+    font-family:var(--mono);font-size:10px;line-height:1.6;padding:10px;border-radius:2px;
+    resize:vertical;min-height:260px;-webkit-text-size-adjust:100%}
+  textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+
+  .bd{width:100%;border-collapse:collapse}
+  .bd td{padding:8px 12px;border-bottom:1px solid var(--f2);font-size:11.5px}
+  .bd tr:last-child td{border-bottom:0}
+  .bd td:first-child{color:var(--i2);width:52%}
+  .bd td:last-child{font-family:var(--mono);font-weight:500;text-align:right}
+  .bd .h{display:block;font-family:var(--body);font-size:9px;color:var(--i3);margin-top:2px;line-height:1.4}
+  .tm{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px}
+  .tm th{padding:7px 9px;text-align:right;color:var(--i3);font-weight:400;font-size:8px;
+    letter-spacing:.09em;text-transform:uppercase;border-bottom:1px solid var(--f2)}
+  .tm th:first-child{text-align:left}
+  .tm td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--f2)}
+  .tm td:first-child{text-align:left;color:var(--i2);font-family:var(--body);font-size:11px}
+  .tm tr:last-child td{border-bottom:0}
+
+  .rw{display:grid;grid-template-columns:1fr 64px 1fr;align-items:center;height:13px}
+  .bl,.brr{height:7.5px;position:relative}
+  .bl{display:flex;justify-content:flex-end}
+  .b2{height:100%}
+  .bl .b2{background:var(--dn)} .brr .b2{background:var(--up)}
+  .k2{font-family:var(--mono);font-size:9px;color:var(--i3);text-align:center;white-space:nowrap}
+  .rw.wl .k2{color:var(--ink);font-weight:700}
+  .rw.sp{height:19px} .rw.sp .k2{color:var(--spot);font-weight:700}
+  .rw.sp .bl::after,.rw.sp .brr::after{content:'';position:absolute;top:50%;left:0;right:0;height:1px;
+    background:repeating-linear-gradient(90deg,var(--spot) 0 4px,transparent 4px 9px);opacity:.5}
+  .rw.mp .k2{color:var(--mist);font-weight:700}
+  .rw.mp .bl::after,.rw.mp .brr::after{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--mist);opacity:.4}
+
+  .oc{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--f2)}
+  .oc>div{background:var(--f1);padding:10px 11px}
+  .oc .k{font-size:9.5px;color:var(--i3);margin-bottom:3px}
+  .oc .v{font-family:var(--mono);font-weight:700;font-size:16px}
+  .oc .z{font-size:9px;color:var(--i3);margin-top:2px}
+
+  .st{padding:40px 18px;text-align:center}
+  .st .t{font-family:var(--disp);font-size:14px;margin-bottom:8px;letter-spacing:.05em}
+  .st .d{font-size:11.5px;color:var(--i2);line-height:1.75;max-width:400px;margin:0 auto 15px}
+  .st code{font-family:var(--mono);font-size:10px;color:var(--i3);word-break:break-all}
+  .ld{width:100%;height:2px;background:var(--f2);overflow:hidden;position:relative;max-width:170px;margin:0 auto}
+  .ld::after{content:'';position:absolute;inset:0;width:40%;background:var(--gold);animation:dr 1.3s ease-in-out infinite}
+  @keyframes dr{0%{left:-40%}100%{left:100%}}
+  footer{font-family:var(--mono);font-size:8.5px;color:var(--i3);line-height:1.8;padding-top:6px}
+  .rv{animation:rs .45s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes rs{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="w">
+<header>
+  <div class="br"><h1>魔改造イビルジョー v2</h1><span class="sb">全部喰い</span></div>
+  <div class="tb" role="tablist">
+    <button role="tab" aria-selected="true" data-p="sub">提出</button>
+    <button role="tab" aria-selected="false" data-p="brd">板</button>
+    <button role="tab" aria-selected="false" data-p="flw">流れ</button>
+    <button role="tab" aria-selected="false" data-p="chn">地合い</button>
+    <button role="tab" aria-selected="false" data-p="log">履歴</button>
+  </div>
+  <div class="bar"><button class="b" id="rf">更新</button>
+    <select id="cur"><option>BTC</option><option>ETH</option></select>
+    <span class="rt" id="rt"></span></div>
+</header>
+<div id="app"><div class="st"><div class="t">獲物を喰らっています</div>
+  <div class="d">25経路を同時に叩いています。落ちた経路があっても残りは動きます。</div><div class="ld"></div></div></div>
+<footer id="ft"></footer>
+</div>
+
+<script>
+const MO={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+const MOJ=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const YR=365*24*3600*1000, LOGK='ibirujo_v2';
+const FUT_MIN=5;   /* これ未満の残日数の先物は年率換算が暴れるので捨てる */
+const DV30=60;     /* DVOLは12時間足。60点＝30日 */
+let CUR='BTC', TAB='sub', D={}, DEAD=[], LOG={};
+const app=document.getElementById('app'), ft=document.getElementById('ft'), rt=document.getElementById('rt');
+
+const nf=n=>n==null||!isFinite(n)?'—':Math.round(n).toLocaleString('en-US');
+const sg=(n,d)=>n==null||!isFinite(n)?'—':(n>0?'+':'')+n.toFixed(d);
+const fx=(n,d)=>n==null||!isFinite(n)?'—':n.toFixed(d);
+const bg=n=>{if(n==null||!isFinite(n))return '—';const a=Math.abs(n);
+  return a>=1e12?(n/1e12).toFixed(2)+'T':a>=1e9?(n/1e9).toFixed(2)+'B':a>=1e6?(n/1e6).toFixed(2)+'M':a>=1e3?(n/1e3).toFixed(1)+'K':n.toFixed(0);};
+const jst=()=>new Date(Date.now()+324e5).toISOString().slice(0,10);
+const expJa=ms=>{const d=new Date(ms);return `${MOJ[d.getUTCMonth()]}${d.getUTCDate()}日`;};
+
+function SRC(S){
+  const s=S+'USDT', l=S.toLowerCase();
+  return [
+  {k:'kl',  n:'価格/CVD',       need:1, u:`https://api.binance.com/api/v3/klines?symbol=${s}&interval=1d&limit=90`},
+  {k:'cb',  n:'Coinbase価格',   u:`https://api.exchange.coinbase.com/products/${S}-USD/candles?granularity=86400`},
+  {k:'fr',  n:'ファンディング',  u:`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${s}&limit=90`},
+  {k:'oi',  n:'先物OI',         u:`https://fapi.binance.com/futures/data/openInterestHist?symbol=${s}&period=1d&limit=30`},
+  {k:'ls',  n:'L/S比',          u:`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${s}&period=1d&limit=30`},
+  {k:'tk',  n:'Taker比',        u:`https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=${s}&period=1d&limit=30`},
+  {k:'opt', n:'オプション板',    need:1, u:`https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency=${S}&kind=option`},
+  {k:'idx', n:'指数価格',        need:1, u:`https://www.deribit.com/api/v2/public/get_index_price?index_name=${l}_usd`},
+  {k:'fut', n:'先物カーブ',      u:`https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency=${S}&kind=future`},
+  {k:'dv',  n:'DVOL履歴',       u:`https://www.deribit.com/api/v2/public/get_volatility_index_data?currency=${S}&start_timestamp=${Date.now()-90*864e5}&end_timestamp=${Date.now()}&resolution=43200`},
+  {k:'hv',  n:'実現ボラ履歴',    u:`https://www.deribit.com/api/v2/public/get_historical_volatility?currency=${S}`},
+  {k:'usdc',n:'USDCペグ',       u:'https://api.binance.com/api/v3/klines?symbol=USDCUSDT&interval=1h&limit=168'},
+  {k:'fdusd',n:'FDUSDペグ',     u:'https://api.binance.com/api/v3/klines?symbol=FDUSDUSDT&interval=1h&limit=168'},
+  {k:'usd1',n:'USD1ペグ',       u:'https://api.binance.com/api/v3/klines?symbol=USD1USDT&interval=1h&limit=168'},
+  {k:'byoi',n:'Bybit OI',       u:'https://api.bybit.com/v5/market/open-interest?category=linear&symbol=BTCUSDT&intervalTime=1d&limit=200'},
+  {k:'byfr',n:'Bybit FR',       u:'https://api.bybit.com/v5/market/funding/history?category=linear&symbol=BTCUSDT&limit=200'},
+  {k:'okfr',n:'OKX FR',         u:'https://www.okx.com/api/v5/public/funding-rate-history?instId=BTC-USDT-SWAP&limit=100'},
+  {k:'hl',  n:'Hyperliquid',    u:'https://api.hyperliquid.xyz/info', post:{type:'metaAndAssetCtxs'}},
+  {k:'mvrv',n:'MVRV',           u:'https://bitcoin-data.com/v1/mvrv/last'},
+  {k:'mvz', n:'MVRV Zスコア',    u:'https://bitcoin-data.com/v1/mvrv-zscore/last'},
+  {k:'nupl',n:'NUPL',           u:'https://bitcoin-data.com/v1/nupl/last'},
+  {k:'fee', n:'mempool手数料',   u:'https://mempool.space/api/v1/fees/recommended'},
+  {k:'mem', n:'未確認Tx',        u:'https://mempool.space/api/mempool'},
+  {k:'fng', n:'Fear&Greed',     u:'https://api.alternative.me/fng/?limit=30'},
+  {k:'glb', n:'時価総額',        u:'https://api.coingecko.com/api/v3/global'},
+];}
+
+async function one(s){
+  const o=s.post?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(s.post)}:{};
+  const r=await fetch(s.u,o);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(j&&j.error) throw new Error(j.error.message||'err');
+  if(j&&j.retCode&&j.retCode!==0) throw new Error(j.retMsg||'retCode');
+  if(j&&j.code&&j.code!=='0'&&j.code!==0) throw new Error(j.msg||'code');
+  return j;
+}
+
+const npdf=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+function ncdf(x){const t=1/(1+.2316419*Math.abs(x)),d=.3989422804014327*Math.exp(-x*x/2);
+  const p=d*t*(.31938153+t*(-.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));
+  return x>0?1-p:p;}
+const gam=(S,K,T,s)=>{if(!(T>0)||!(s>0))return 0;const v=s*Math.sqrt(T);
+  return npdf((Math.log(S/K)+v*v/2)/v)/(S*v);};
+const dlt=(S,K,T,s,t)=>{if(!(T>0)||!(s>0))return NaN;const v=s*Math.sqrt(T);
+  const d1=(Math.log(S/K)+v*v/2)/v; return t==='C'?ncdf(d1):ncdf(d1)-1;};
+function maxPain(a,ks){let b=null,bv=Infinity;
+  for(const K of ks){let v=0;
+    for(const k of ks) v+= k<K?a[k].C*(K-k) : k>K?a[k].P*(k-K) : 0;
+    if(v<bv){bv=v;b=K;}} return b;}
+function nGex(S,r,n){let g=0;
+  for(const x of r){const T=(x.ms-n)/YR, v=gam(S,x.strike,T,x.iv)*x.oi*S*S*.01;
+    g+= x.type==='C'?v:-v;} return g;}
+function gFlip(S,r,n){const lo=S*.7,hi=S*1.4,N=70,st=(hi-lo)/N;
+  let pv=nGex(lo,r,n),px=lo;
+  for(let i=1;i<=N;i++){const x=lo+st*i,cv=nGex(x,r,n);
+    if((pv<0)!==(cv<0)) return px+st*(Math.abs(pv)/(Math.abs(pv)+Math.abs(cv)));
+    pv=cv;px=x;} return null;}
+/* 25Δ RR ＝ コールIV − プットIV（負ならプット高） */
+function rr25(r,S,n,ms){const T=(ms-n)/YR; if(T<=0) return null;
+  let bc=null,bp=null,ec=9,ep=9;
+  for(const o of r){ if(o.ms!==ms||!(o.iv>0)) continue;
+    const d=dlt(S,o.strike,T,o.iv,o.type); if(!isFinite(d)) continue;
+    if(o.type==='C'){const e=Math.abs(d-.25); if(e<ec){ec=e;bc=o;}}
+    else{const e=Math.abs(d+.25); if(e<ep){ep=e;bp=o;}}}
+  return (bc&&bp&&ec<=.12&&ep<=.12)?(bc.iv-bp.iv)*100:null;}
+const atmIV=(r,S,ms)=>{const a=r.filter(x=>x.ms===ms&&x.iv>0&&Math.abs(x.strike-S)/S<.05);
+  return a.length?a.reduce((x,y)=>x+y.iv,0)/a.length*100:NaN;};
+
+const W=400,PL=6,PR=50,PT=8,PB=12;
+const mkX=n=>i=>PL+i*(W-PL-PR)/Math.max(1,n-1);
+function pxSVG(r,hl,H){
+  const vs=[...r.map(x=>x.h),...r.map(x=>x.l),...hl.map(l=>l.v)].filter(isFinite);
+  const hi=Math.max(...vs),lo=Math.min(...vs),pd=(hi-lo)*.05,HI=hi+pd,LO=lo-pd;
+  const X=mkX(r.length), Y=v=>PT+(HI-v)/(HI-LO)*(H-PT-PB);
+  const bw=Math.max(.9,(W-PL-PR)/r.length*.6); let s='';
+  hl.forEach(l=>{if(!isFinite(l.v))return;const y=Y(l.v);
+    s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="${l.c}" stroke-width=".8" stroke-dasharray="${l.d}" opacity=".75"/>`;
+    s+=`<text x="${W-PR+3}" y="${(y+2.5).toFixed(1)}" fill="${l.c}" font-size="6.5" font-family="monospace">${l.t}</text>`;});
+  r.forEach((x,i)=>{const px=X(i),c=x.c>=x.o?'#5FA8D3':'#E0645A',yo=Y(x.o),yc=Y(x.c);
+    s+=`<line x1="${px.toFixed(1)}" y1="${Y(x.h).toFixed(1)}" x2="${px.toFixed(1)}" y2="${Y(x.l).toFixed(1)}" stroke="${c}" stroke-width=".65" opacity=".85"/>`;
+    s+=`<rect x="${(px-bw/2).toFixed(1)}" y="${Math.min(yo,yc).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(.6,Math.abs(yo-yc)).toFixed(1)}" fill="${c}" opacity=".9"/>`;});
+  return `<svg viewBox="0 0 ${W} ${H}">${s}</svg>`;}
+function lnSVG(sets,H,zero,ref){
+  const all=sets.flatMap(s=>s.d).filter(isFinite);
+  if(!all.length) return '';
+  let hi=Math.max(...all),lo=Math.min(...all);
+  if(ref!=null){hi=Math.max(hi,ref);lo=Math.min(lo,ref);}
+  if(zero){const m=Math.max(Math.abs(hi),Math.abs(lo));hi=m;lo=-m;}
+  const pd=(hi-lo)*.09||Math.abs(hi)*.01||1; hi+=pd; lo-=pd;
+  const Y=v=>PT+(hi-v)/(hi-lo)*(H-PT-PB);
+  let s='';
+  if((lo<0&&hi>0)||ref!=null){const y=Y(ref!=null?ref:0);
+    s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#2A3E34" stroke-width=".8" stroke-dasharray="2 2"/>`;}
+  sets.forEach(st=>{const X=mkX(st.d.length);
+    s+=`<path d="${st.d.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${st.c}" stroke-width="1.25" stroke-linejoin="round"/>`;
+    s+=`<text x="${W-PR+3}" y="${(Y(st.d.at(-1))+2.5).toFixed(1)}" fill="${st.c}" font-size="6.5" font-family="monospace">${st.f(st.d.at(-1))}</text>`;});
+  return `<svg viewBox="0 0 ${W} ${H}">${s}</svg>`;}
+function brSVG(d,H,c1,c2,f){
+  if(!d.length) return '';
+  const m=Math.max(...d.map(Math.abs))||1,hi=m*1.1,lo=-hi;
+  const Y=v=>PT+(hi-v)/(hi-lo)*(H-PT-PB), X=mkX(d.length);
+  const bw=Math.max(.7,(W-PL-PR)/d.length*.6);
+  let s=`<line x1="${PL}" y1="${Y(0).toFixed(1)}" x2="${W-PR}" y2="${Y(0).toFixed(1)}" stroke="#2A3E34" stroke-width=".8"/>`;
+  d.forEach((v,i)=>{const x=X(i),y0=Y(0),y=Y(v);
+    s+=`<rect x="${(x-bw/2).toFixed(1)}" y="${Math.min(y0,y).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(.5,Math.abs(y-y0)).toFixed(1)}" fill="${v>=0?c1:c2}" opacity=".85"/>`;});
+  s+=`<text x="${W-PR+3}" y="${(Y(d.at(-1))+2.5).toFixed(1)}" fill="${d.at(-1)>=0?c1:c2}" font-size="6.5" font-family="monospace">${f(d.at(-1))}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}">${s}</svg>`;}
+function smSVG(pts,S,H){
+  if(pts.length<3) return '';
+  const xs=pts.map(p=>p.k), ys=pts.map(p=>p.iv);
+  const xl=Math.min(...xs),xh=Math.max(...xs),yl=Math.min(...ys),yh=Math.max(...ys);
+  const X=v=>PL+(v-xl)/(xh-xl)*(W-PL-PR), Y=v=>PT+(yh+2-v)/(yh-yl+4)*(H-PT-PB);
+  let s=`<line x1="${X(S).toFixed(1)}" y1="${PT}" x2="${X(S).toFixed(1)}" y2="${H-PB}" stroke="#F0E4A8" stroke-width=".8" stroke-dasharray="3 3" opacity=".6"/>`;
+  s+=`<path d="${pts.map((p,i)=>`${i?'L':'M'}${X(p.k).toFixed(1)} ${Y(p.iv).toFixed(1)}`).join(' ')}" fill="none" stroke="#9B8FC7" stroke-width="1.4"/>`;
+  pts.forEach(p=>{s+=`<circle cx="${X(p.k).toFixed(1)}" cy="${Y(p.iv).toFixed(1)}" r="1.2" fill="#9B8FC7" opacity=".7"/>`;});
+  s+=`<text x="${PL}" y="${H-3}" fill="#5C7568" font-size="6.5" font-family="monospace">${nf(xl)}</text>`;
+  s+=`<text x="${W-PR-24}" y="${H-3}" fill="#5C7568" font-size="6.5" font-family="monospace">${nf(xh)}</text>`;
+  s+=`<text x="${W-PR+3}" y="${(Y(pts.at(-1).iv)+2.5).toFixed(1)}" fill="#9B8FC7" font-size="6.5" font-family="monospace">${pts.at(-1).iv.toFixed(0)}%</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}">${s}</svg>`;}
+
+const rdLog=()=>{try{return JSON.parse(localStorage.getItem(LOGK)||'{}');}catch(_){return {};}};
+const wrLog=l=>{try{localStorage.setItem(LOGK,JSON.stringify(l));}catch(_){}};
+function rec(s){const l=rdLog(); l[jst()]={...s,t:Date.now()};
+  const ks=Object.keys(l).sort(); while(ks.length>120) delete l[ks.shift()];
+  wrLog(l); return l;}
+
+async function load(){
+  app.innerHTML=`<div class="st"><div class="t">獲物を喰らっています</div>
+    <div class="d">25経路を同時に叩いています。落ちた経路があっても残りは動きます。</div><div class="ld"></div></div>`;
+  ft.innerHTML=''; rt.textContent='';
+  const src=SRC(CUR);
+  const rs=await Promise.allSettled(src.map(one));
+  D={}; DEAD=[];
+  src.forEach((s,i)=>{ if(rs[i].status==='fulfilled') D[s.k]=rs[i].value;
+    else {D[s.k]=null; DEAD.push(s.n);} });
+  const miss=src.filter(s=>s.need&&!D[s.k]);
+  if(miss.length){
+    app.innerHTML=`<div class="st"><div class="t">中核の経路が閉じています</div>
+      <div class="d">${miss.map(s=>s.n).join('、')} が取れないと、何も組み立てられません。<br>
+      Claudeのアーティファクト内では必ずこうなります。CodePenで開いてください。</div>
+      <button class="b" onclick="load()" style="margin:0 auto;display:block">もう一度</button></div>`;
+    return;
+  }
+  try{ calc(); LOG=rec(D.snap); render(); }
+  catch(e){ app.innerHTML=`<div class="st"><div class="t">組み立てに失敗</div>
+    <div class="d"><code>${e.message}</code></div>
+    <button class="b" onclick="load()" style="margin:0 auto;display:block">もう一度</button></div>`; }
+}
+
+function calc(){
+  const now=Date.now(); D.now=now;
+  D.spot=+D.idx.result.index_price;
+  const S=D.spot;
+
+  D.px=D.kl.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5],tb:+k[9]}));
+  let cv=0; D.cvd=D.px.map(p=>{cv+=2*p.tb-p.v;return cv;});
+  D.cvd7=D.cvd.at(-1)-D.cvd.at(-8);
+
+  if(D.cb){const m={}; D.cb.forEach(r=>{m[r[0]*1000]=+r[4];});
+    let last=0; D.prem=D.px.map(p=>{const c=m[p.t]; if(c) last=(c-p.c)/p.c*100; return last;});
+    D.prem0=D.prem.at(-1); D.prem14=D.prem.slice(-14).reduce((a,b)=>a+b,0)/Math.min(14,D.prem.length);}
+
+  const rows=[];
+  for(const b of D.opt.result){
+    const q=b.instrument_name.split('-'); if(q.length!==4) continue;
+    const m=q[1].match(/^(\d{1,2})([A-Z]{3})(\d{2})$/); if(!m||!(m[2] in MO)) continue;
+    const ms=Date.UTC(2000+ +m[3],MO[m[2]],+m[1],8,0,0); if(ms<=now) continue;
+    const o=+b.open_interest||0; if(o<=0) continue;
+    rows.push({ms,strike:+q[2],type:q[3],oi:o,iv:(+b.mark_iv||0)/100});
+  }
+  D.rows=rows;
+  const agg={}; rows.forEach(r=>{agg[r.strike]=agg[r.strike]||{C:0,P:0}; agg[r.strike][r.type]+=r.oi;});
+  const ks=Object.keys(agg).map(Number).sort((a,b)=>a-b);
+  D.agg=agg; D.ks=ks;
+  D.mp=maxPain(agg,ks);
+  D.cw=ks.reduce((a,k)=>agg[k].C>agg[a].C?k:a,ks[0]);
+  D.pw=ks.reduce((a,k)=>agg[k].P>agg[a].P?k:a,ks[0]);
+  D.co=ks.reduce((s,k)=>s+agg[k].C,0); D.po=ks.reduce((s,k)=>s+agg[k].P,0);
+  D.pcr=D.co>0?D.po/D.co:NaN;
+  D.gex=nGex(S,rows,now); D.flip=gFlip(S,rows,now);
+
+  /* 当日満期は残り数時間でIVが暴れるので落とす */
+  const ems=[...new Set(rows.map(r=>r.ms))].sort((a,b)=>a-b);
+  D.term=ems.map(m=>({ms:m,d:Math.max(0,Math.round((m-now)/864e5)),iv:atmIV(rows,S,m),rr:rr25(rows,S,now,m)}))
+            .filter(t=>isFinite(t.iv)&&t.d>=1);
+  const cd=D.term.find(t=>t.rr!=null&&t.d>=5)||D.term.find(t=>t.rr!=null)||D.term[0];
+  D.rr=cd?cd.rr:null; D.rrD=cd?cd.d:null; D.smMs=cd?cd.ms:null;
+  D.smile=D.smMs?rows.filter(r=>r.ms===D.smMs&&r.iv>0&&r.strike>S*.7&&r.strike<S*1.4)
+    .reduce((a,r)=>{const e=a.find(x=>x.k===r.strike);
+      const otm = r.strike>=S ? r.type==='C' : r.type==='P';
+      if(otm&&!e) a.push({k:r.strike,iv:r.iv*100}); return a;},[])
+    .sort((a,b)=>a.k-b.k):[];
+
+  /* 先物：残り FUT_MIN 日未満は年率換算が発散するので捨てる */
+  if(D.fut){D.curve=D.fut.result.map(f=>{
+      const q=f.instrument_name.split('-');
+      if(q[1]==='PERPETUAL') return null;
+      const m=q[1]&&q[1].match(/^(\d{1,2})([A-Z]{3})(\d{2})$/); if(!m||!(m[2] in MO)) return null;
+      const ms=Date.UTC(2000+ +m[3],MO[m[2]],+m[1],8,0,0);
+      const d=(ms-now)/864e5; if(d<FUT_MIN) return null;
+      const p=+f.mark_price; if(!(p>0)) return null;
+      return {n:q[1], d:Math.round(d), p, abs:(p/S-1)*100, b:(p/S-1)*365/d*100};
+    }).filter(Boolean).sort((a,b)=>a.d-b.d);}
+
+  if(D.dv) D.dvol=D.dv.result.data.map(x=>x[4]);
+  if(D.hv) D.rvol=D.hv.result.map(x=>x[1]);
+  if(D.dvol&&D.dvol.length){
+    const w=D.dvol.slice(-DV30);                    /* 30日ぶん */
+    const h=Math.max(...w), l=Math.min(...w);
+    D.dv0=D.dvol.at(-1); D.dvR=h>l?(D.dv0-l)/(h-l)*100:50; D.dvL=l; D.dvH=h;
+    const w9=D.dvol; D.dvL9=Math.min(...w9); D.dvH9=Math.max(...w9);}
+
+  const peg=(x,n)=>{if(!x)return null; const c=x.map(k=>+k[4]);
+    return {n, v:c.at(-1), lo:Math.min(...c), s:c};};
+  D.pegs=[peg(D.usdc,'USDC'),peg(D.fdusd,'FDUSD'),peg(D.usd1,'USD1')].filter(Boolean);
+
+  if(D.fr){D.fr0=(+D.fr.at(-1).fundingRate)*100; D.frS=D.fr.map(f=>+f.fundingRate*100);}
+  if(D.oi){D.oiN=+D.oi.at(-1).sumOpenInterest; D.oiP=(D.oiN/+D.oi[0].sumOpenInterest-1)*100;}
+  if(D.ls) D.ls0=+D.ls.at(-1).longShortRatio;
+  if(D.tk) D.tk0=+D.tk.at(-1).buySellRatio;
+  if(D.byoi) D.byOI=+D.byoi.result.list[0].openInterest;
+  if(D.byfr) D.byFR=+D.byfr.result.list[0].fundingRate*100;
+  if(D.okfr) D.okFR=+D.okfr.data[0].fundingRate*100;
+  if(D.hl){try{const i=D.hl[0].universe.findIndex(x=>x.name===CUR);
+    D.hlOI=+D.hl[1][i].openInterest; D.hlFR=+D.hl[1][i].funding*100;}catch(_){}}
+  const val=o=>{if(!o)return null;const k=Object.keys(o).find(k=>k!=='d'&&k!=='unixTs'&&k!=='theDay');
+    return k?+o[k]:null;};
+  D.mvrv0=val(D.mvrv); D.mvz0=val(D.mvz); D.nupl0=val(D.nupl);
+  if(D.fee) D.fee0=D.fee.fastestFee;
+  if(D.mem) D.mem0=D.mem.count;
+  if(D.fng){D.fng0=+D.fng.data[0].value; D.fngC=D.fng.data[0].value_classification;
+    D.fngS=D.fng.data.map(x=>+x.value).reverse();}
+  if(D.glb){D.mcap=D.glb.data.total_market_cap.usd; D.btcD=D.glb.data.market_cap_percentage.btc;}
+
+  D.snap={p:S,mp:D.mp,fl:D.flip,rr:D.rr,gex:D.gex,pr:D.prem0,fr:D.fr0,oi:D.oiN,
+    ls:D.ls0,tk:D.tk0,c7:D.cvd7,pcr:D.pcr,dv:D.dv0,dvr:D.dvR,fng:D.fng0,
+    mvrv:D.mvrv0,nupl:D.nupl0,fd:D.pegs.find(p=>p.n==='FDUSD')?.v};
+}
+
+function txt(){
+  const t=D.term.slice(0,6).map(x=>`${x.d}日 IV${fx(x.iv,1)}% RR${x.rr==null?'—':sg(x.rr,1)}`).join(' / ');
+  const ks=Object.keys(LOG).sort(), pv=ks.length>1?LOG[ks[ks.length-2]]:null;
+  const dl=pv?`\n【前日比】価格 ${sg((D.spot/pv.p-1)*100,2)}% ／ RR ${D.rr!=null&&pv.rr!=null?sg(D.rr-pv.rr,1):'—'} ／ フリップ ${D.flip&&pv.fl?sg(D.flip-pv.fl,0):'—'} ／ GEX ${sg((D.gex-pv.gex)/1e6,1)}M ／ DVOL ${D.dv0&&pv.dv?sg(D.dv0-pv.dv,1):'—'} ／ OI ${D.oiN&&pv.oi?sg(D.oiN-pv.oi,0):'—'} ／ F&G ${D.fng0&&pv.fng?sg(D.fng0-pv.fng,0):'—'} ／ FDUSD ${D.snap.fd&&pv.fd?sg(D.snap.fd-pv.fd,4):'—'}`
+    :'\n【前日比】記録なし（明日から出ます）';
+  const pg=D.pegs.map(p=>`${p.n} ${fx(p.v,4)}`).join(' / ')||'—';
+  const cv=(D.curve&&D.curve.length)?D.curve.slice(0,5).map(c=>`${c.n}(${c.d}日) ${sg(c.b,1)}%`).join(' / '):'—';
+  return `【${CUR} 全部喰い ${jst()} ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} JST】
+価格 ${nf(D.spot)}ドル
+──オプション板──
+Max Pain ${nf(D.mp)}（${sg((D.mp/D.spot-1)*100,2)}%）
+ガンマフリップ ${nf(D.flip)}（${D.flip?sg((D.flip/D.spot-1)*100,2):'—'}%）
+ネットGEX ${sg(D.gex/1e6,2)}M（${D.gex>=0?'正':'負'}）
+25Δ RR ${D.rr==null?'—':sg(D.rr,1)}（${D.rrD}日物・コールIV−プットIV・負ならプット高）
+期間構造 ${t}
+コール壁 ${nf(D.cw)} / プット壁 ${nf(D.pw)} / PCR ${fx(D.pcr,2)}
+総建玉 ${nf(D.co+D.po)} ${CUR}
+DVOL ${fx(D.dv0,1)}（30日レンジ ${fx(D.dvL,0)}〜${fx(D.dvH,0)}・${fx(D.dvR,0)}%地点／90日 ${fx(D.dvL9,0)}〜${fx(D.dvH9,0)}）
+先物ベーシス年率 ${cv}
+──フロー──
+Coinbase Premium ${sg(D.prem0,3)}%（14日平均 ${sg(D.prem14,3)}%）※ETFはPrime経由なのでここには映らない
+現物CVD 90日 ${sg(D.cvd.at(-1),0)} / 直近7日 ${sg(D.cvd7,0)}
+ファンディング Binance ${sg(D.fr0,4)}% / Bybit ${sg(D.byFR,4)}% / OKX ${sg(D.okFR,4)}% / HL ${sg(D.hlFR,4)}%
+先物OI Binance ${nf(D.oiN)}（30日 ${sg(D.oiP,1)}%）/ Bybit ${nf(D.byOI)} / HL ${nf(D.hlOI)}
+L/S比 ${fx(D.ls0,2)} / Taker買売比 ${fx(D.tk0,2)}
+ペグ ${pg}
+──地合い──
+MVRV ${fx(D.mvrv0,2)} / MVRV-Z ${fx(D.mvz0,2)} / NUPL ${fx(D.nupl0,2)}
+Fear&Greed ${D.fng0??'—'}（${D.fngC||'—'}）/ 時価総額 ${D.mcap?'$'+bg(D.mcap):'—'} / BTC.D ${fx(D.btcD,1)}%
+mempool ${D.fee0??'—'} sat/vB / 未確認 ${nf(D.mem0)}件${dl}
+──取得できず（手動で撮る）──
+${DEAD.length?DEAD.join('、'):'なし'}
+※ETFフロー・板ヒートマップ・価格帯別OIマップ・株式相関は構造的に取得不可`;
+}
+
+function render(){
+  const ks=Object.keys(LOG).sort(), pv=ks.length>1?LOG[ks[ks.length-2]]:null;
+  const dd=(a,b,f)=>pv&&b!=null&&a!=null&&isFinite(b)&&isFinite(a)?`<div class="d">前日 ${f(a-b)}</div>`:'<div class="d">—</div>';
+  const S=D.spot;
+
+  const sub=`<div class="p rv"><div class="hero">
+      <div class="lb">現在値 ／ ${CUR}</div>
+      <div class="big">${nf(S)}<span class="u">ドル</span></div>
+      ${pv?`<div class="dl ${S>=pv.p?'pos':'neg'}">前日比 ${sg((S/pv.p-1)*100,2)}％</div>`:'<div class="dl nu">前日比は明日から</div>'}
+    </div>
+    <div class="gr">
+      <div class="c"><div class="k">ガンマフリップ</div><div class="v gd">${nf(D.flip)}</div>
+        <div class="d">${D.flip?sg((D.flip/S-1)*100,2)+'％':'—'}</div></div>
+      <div class="c"><div class="k">Max Pain</div><div class="v mt">${nf(D.mp)}</div>
+        <div class="d">${sg((D.mp/S-1)*100,2)}％ の引力</div></div>
+      <div class="c"><div class="k">25Δ RR ${D.rrD}日</div>
+        <div class="v ${D.rr==null?'nu':D.rr<-2.5?'neg':D.rr>2.5?'pos':'nu'}">${D.rr==null?'—':sg(D.rr,1)}</div>
+        ${dd(D.rr,pv?.rr,v=>sg(v,1))}</div>
+      <div class="c"><div class="k">ネットGEX</div>
+        <div class="v ${D.gex>=0?'pos':'neg'}">${sg(D.gex/1e6,1)}M</div>
+        ${dd(D.gex/1e6,pv?.gex/1e6,v=>sg(v,1)+'M')}</div>
+      <div class="c"><div class="k">DVOL</div><div class="v bn">${fx(D.dv0,1)}</div>
+        <div class="d">30日レンジ ${fx(D.dvR,0)}％地点</div></div>
+      <div class="c"><div class="k">ファンディング</div>
+        <div class="v ${D.fr0>=0?'pos':'neg'}">${sg(D.fr0,4)}％</div>
+        <div class="d">年率 ${sg(D.fr0*3*365,1)}％</div></div>
+      <div class="c"><div class="k">Coinbase Premium</div>
+        <div class="v ${D.prem0>=0?'pos':'neg'}">${sg(D.prem0,3)}％</div>
+        <div class="d">ETFとは別物</div></div>
+      <div class="c"><div class="k">Fear & Greed</div>
+        <div class="v ${D.fng0<40?'neg':D.fng0>60?'pos':'nu'}">${D.fng0??'—'}</div>
+        <div class="d">${D.fngC||'—'}</div></div>
+    </div>
+    ${DEAD.length?`<div class="dead">✕ 取れなかった経路：${DEAD.join('、')}</div>`:
+      '<div class="dead" style="color:var(--ok)">◯ 25経路すべて開通</div>'}
+    </div>
+    <div class="p rv"><div class="ph"><div class="pt">クロちゃん提出用</div>
+      <button class="b" id="cp">コピー</button></div>
+      <div style="padding:10px 12px"><textarea id="tx" readonly>${txt()}</textarea></div>
+      <div class="nt">末尾に「取得できず」のリストが自動で入る。そこだけ手で撮ればいい。</div></div>`;
+
+  const vis=D.ks.filter(k=>k>S*.78&&k<S*1.22);
+  const mx=Math.max(...vis.map(k=>Math.max(D.agg[k].C,D.agg[k].P)),1);
+  const mk=[...vis]; if(!mk.includes(D.mp)) mk.push(D.mp); mk.sort((a,b)=>a-b);
+  let bars='',sd=false;
+  for(let i=mk.length-1;i>=0;i--){const k=mk[i];
+    if(!sd&&k<S){bars+=`<div class="rw sp"><div class="bl"></div><div class="k2">${nf(S)}</div><div class="brr"></div></div>`;sd=true;}
+    const a=D.agg[k]||{C:0,P:0}, rc=Math.min(1,a.C/mx), rp=Math.min(1,a.P/mx);
+    const fg=r=>`filter:blur(${((1-r)**2*3).toFixed(2)}px);opacity:${(.22+.78*Math.sqrt(r)).toFixed(2)}`;
+    const cl=k===D.mp?'rw mp':(k===D.cw||k===D.pw?'rw wl':'rw');
+    bars+=`<div class="${cl}"><div class="bl"><div class="b2" style="width:${(rp*100).toFixed(1)}%;${fg(rp)}"></div></div>
+      <div class="k2">${k===D.mp?'◆':''}${nf(k)}</div>
+      <div class="brr"><div class="b2" style="width:${(rc*100).toFixed(1)}%;${fg(rc)}"></div></div></div>`;}
+  if(!sd) bars+=`<div class="rw sp"><div class="bl"></div><div class="k2">${nf(S)}</div><div class="brr"></div></div>`;
+
+  const brd=`<div class="p rv"><div class="ph"><div class="pt">見えない壁</div>
+      <div class="lg"><span><i style="background:var(--dn)"></i>プット</span><span><i style="background:var(--up)"></i>コール</span></div></div>
+      <div style="padding:9px 6px 11px">${bars}</div></div>
+    ${D.smile.length>2?`<div class="p rv"><div class="ph"><div class="pt">スマイル</div>
+      <div class="lg">${expJa(D.smMs)}／OTM側のマークIV</div></div>
+      <div class="ch">${smSVG(D.smile,S,120)}</div>
+      <div class="nt">左が下、右が上。左が高いほど下への保険が高い。谷の位置が市場の重心。</div></div>`:''}
+    <div class="p rv"><div class="ph"><div class="pt">霧の層</div><div class="lg">RR＝コールIV−プットIV</div></div>
+      <table class="tm"><thead><tr><th>満期</th><th>残</th><th>ATM IV</th><th>25Δ RR</th></tr></thead><tbody>
+      ${D.term.slice(0,8).map(t=>`<tr><td>${expJa(t.ms)}</td><td class="nu">${t.d}日</td>
+        <td>${fx(t.iv,1)}%</td>
+        <td class="${t.rr==null?'nu':t.rr<-2.5?'neg':t.rr>2.5?'pos':'nu'}">${t.rr==null?'—':sg(t.rr,1)}</td></tr>`).join('')}
+      </tbody></table>
+      <div class="nt">当日満期は残り時間が短くIVが暴れるので落としてある。</div></div>
+    ${(D.curve&&D.curve.length)?`<div class="p rv"><div class="ph"><div class="pt">先物カーブ</div>
+      <div class="lg">Deribit／残${FUT_MIN}日以上</div></div>
+      <table class="tm"><thead><tr><th>限月</th><th>残</th><th>価格</th><th>実額</th><th>年率</th></tr></thead><tbody>
+      ${D.curve.map(c=>`<tr><td>${c.n}</td><td class="nu">${c.d}日</td><td>${nf(c.p)}</td>
+        <td class="nu">${sg(c.abs,2)}%</td>
+        <td class="${c.b>=0?'pos':'neg'}">${sg(c.b,2)}%</td></tr>`).join('')}
+      </tbody></table>
+      <div class="nt">プラスはコンタンゴ（通常）。マイナスはバックワーデーション＝現物が先物より高い＝逼迫。残${FUT_MIN}日未満は年率換算が発散するので除外。</div></div>`:''}
+    <div class="p rv"><div class="ph"><div class="pt">討伐ボード</div><div class="lg">${D.rows.length}銘柄</div></div>
+      <table class="bd">
+        <tr><td>コールウォール<span class="h">上値の重り</span></td><td class="pos">${nf(D.cw)}</td></tr>
+        <tr><td>プットウォール<span class="h">下値の支え</span></td><td class="neg">${nf(D.pw)}</td></tr>
+        <tr><td>PCR（建玉）<span class="h">1未満はコール優勢</span></td><td class="${D.pcr<1?'pos':'neg'}">${fx(D.pcr,2)}</td></tr>
+        <tr><td>総建玉<span class="h">C ${nf(D.co)} ／ P ${nf(D.po)}</span></td><td class="nu">${nf(D.co+D.po)} ${CUR}</td></tr>
+      </table></div>`;
+
+  const hl=[{v:D.flip,c:'#E8C468',t:'FLIP',d:'4 2'},{v:D.mp,c:'#E8A0C8',t:'PAIN',d:'2 2'},
+            {v:D.cw,c:'#E0645A',t:'CALL',d:'1 3'},{v:D.pw,c:'#5FA8D3',t:'PUT',d:'1 3'}];
+  const flw=`<div class="p rv"><div class="ph"><div class="pt">獲物の地形</div>
+      <div class="lg"><span><i style="background:#E8C468"></i>フリップ</span><span><i style="background:#E8A0C8"></i>ペイン</span>
+      <span><i style="background:#E0645A"></i>コール壁</span><span><i style="background:#5FA8D3"></i>プット壁</span></div></div>
+      <div class="ch">${pxSVG(D.px,hl,180)}</div>
+      <div class="nt">水平線は今この瞬間の板から算出。過去には存在していない。</div></div>
+    ${D.dvol?`<div class="p rv"><div class="ph"><div class="pt">霧の濃さ</div>
+      <div class="lg">DVOL 90日表示／レンジ判定は直近30日</div></div>
+      <div class="ch">${lnSVG([{d:D.dvol,c:'#9B8FC7',f:v=>fx(v,1)}],100,false)}</div>
+      <div class="nt">直近30日レンジ ${fx(D.dvL,0)}〜${fx(D.dvH,0)} の ${fx(D.dvR,0)}%地点。低いほど市場が「動かない」に賭けている。</div></div>`:''}
+    ${D.prem?`<div class="p rv"><div class="ph"><div class="pt">Coinbase Premium</div><div class="lg">Coinbase − Binance ／ ％</div></div>
+      <div class="ch">${lnSVG([{d:D.prem,c:'#7FB3D9',f:v=>sg(v,3)}],95,true)}</div>
+      <div class="nt">ETFの執行はCoinbase Prime（OTC）なのでここには映らない。これはCoinbase板の需給。</div></div>`:''}
+    <div class="p rv"><div class="ph"><div class="pt">喰らった量</div><div class="lg">Binance 現物CVD</div></div>
+      <div class="ch">${lnSVG([{d:D.cvd,c:'#E8C468',f:v=>bg(v)}],95,false)}</div>
+      <div class="nt">90日ウィンドウ。古い日が押し出されるだけで数字が動くので、傾きだけ見る。</div></div>
+    ${D.frS?`<div class="p rv"><div class="ph"><div class="pt">餓えの度合い</div><div class="lg">ファンディング ／ ％ per 8h</div></div>
+      <div class="ch">${brSVG(D.frS,90,'#E0645A','#5FA8D3',v=>sg(v,4))}</div></div>`:''}
+    ${D.pegs.length?`<div class="p rv"><div class="ph"><div class="pt">ペグの軋み</div>
+      <div class="lg">${D.pegs.map(p=>p.n).join(' / ')} ／ USDT建て</div></div>
+      <div class="ch">${lnSVG(D.pegs.map((p,i)=>({d:p.s,c:['#5FA8D3','#E8C468','#E8A0C8'][i],f:v=>fx(v,4)})),100,false,1)}</div>
+      <div class="nt">点線が 1.0000。沈むほどそのステーブルが売られている。FDUSDはBinanceエコシステムのストレス計。</div></div>`:''}`;
+
+  const zone=(v,lo,hi)=>v==null?0:Math.max(0,Math.min(1,(v-lo)/(hi-lo)));
+  const zbar=(v,lo,hi,l)=>{const z=zone(v,lo,hi);
+    return `<div style="margin-top:6px"><div style="height:3px;background:var(--f2);position:relative">
+      <div style="position:absolute;left:0;top:0;height:100%;width:${(z*100).toFixed(0)}%;background:${z>.6?'var(--up)':'var(--dn)'}"></div></div>
+      <div class="z">${l}</div></div>`;};
+  const chn=`${D.mvrv0!=null||D.nupl0!=null?`<div class="p rv"><div class="ph"><div class="pt">サイクル位置</div>
+      <div class="lg">bitcoin-data.com</div></div>
+      <div class="oc">
+        <div><div class="k">MVRV Ratio</div><div class="v ${D.mvrv0>3.7?'pos':'nu'}">${fx(D.mvrv0,2)}</div>
+          ${zbar(D.mvrv0,0.7,3.7,'0.7 割安 ─ 3.7 過熱')}</div>
+        <div><div class="k">MVRV Z-Score</div><div class="v ${D.mvz0>6.5?'pos':'nu'}">${fx(D.mvz0,2)}</div>
+          ${zbar(D.mvz0,-0.5,6.5,'-0.5 底 ─ 6.5 天井')}</div>
+        <div><div class="k">NUPL</div><div class="v ${D.nupl0>0.7?'pos':'nu'}">${fx(D.nupl0,2)}</div>
+          ${zbar(D.nupl0,0,0.75,'0 損益分岐 ─ 0.75 陶酔')}</div>
+        <div><div class="k">Fear & Greed</div><div class="v ${D.fng0<40?'neg':D.fng0>60?'pos':'nu'}">${D.fng0??'—'}</div>
+          ${zbar(D.fng0,0,100,D.fngC||'0 恐怖 ─ 100 強欲')}</div>
+      </div>
+      <div class="nt">どれも遅行指標。底や天井の「圏内か」を測るもので、明日の方向は言わない。</div></div>`:''}
+    ${D.fngS?`<div class="p rv"><div class="ph"><div class="pt">恐怖と強欲</div><div class="lg">30日</div></div>
+      <div class="ch">${lnSVG([{d:D.fngS,c:'#E8A0C8',f:v=>fx(v,0)}],85,false,50)}</div>
+      <div class="nt">点線が50（中立）。25以下で極度の恐怖、75以上で極度の強欲。</div></div>`:''}
+    <div class="p rv"><div class="ph"><div class="pt">他所の餓え</div><div class="lg">取引所横断</div></div>
+      <table class="bd">
+        <tr><td>Binance FR<span class="h">年率 ${sg(D.fr0*3*365,1)}％</span></td><td class="${D.fr0>=0?'pos':'neg'}">${sg(D.fr0,4)}％</td></tr>
+        <tr><td>Bybit FR</td><td class="${D.byFR>=0?'pos':'neg'}">${sg(D.byFR,4)}％</td></tr>
+        <tr><td>OKX FR</td><td class="${D.okFR>=0?'pos':'neg'}">${sg(D.okFR,4)}％</td></tr>
+        <tr><td>Hyperliquid FR<span class="h">1時間ごと</span></td><td class="${D.hlFR>=0?'pos':'neg'}">${sg(D.hlFR,4)}％</td></tr>
+        <tr><td>Binance OI<span class="h">30日 ${sg(D.oiP,1)}％</span></td><td class="nu">${nf(D.oiN)}</td></tr>
+        <tr><td>Bybit OI</td><td class="nu">${nf(D.byOI)}</td></tr>
+        <tr><td>Hyperliquid OI</td><td class="nu">${nf(D.hlOI)}</td></tr>
+        <tr><td>L/S比 ／ Taker買売比</td><td><span class="${D.ls0>1?'pos':'neg'}">${fx(D.ls0,2)}</span>
+          <span class="nu"> / </span><span class="${D.tk0>1?'pos':'neg'}">${fx(D.tk0,2)}</span></td></tr>
+      </table></div>
+    <div class="p rv"><div class="ph"><div class="pt">網の混み具合</div><div class="lg">mempool ／ CoinGecko</div></div>
+      <table class="bd">
+        <tr><td>推奨手数料<span class="h">最速で入る値段</span></td><td class="nu">${D.fee0??'—'} sat/vB</td></tr>
+        <tr><td>未確認Tx</td><td class="nu">${nf(D.mem0)}</td></tr>
+        <tr><td>暗号資産 時価総額</td><td class="nu">${D.mcap?'$'+bg(D.mcap):'—'}</td></tr>
+        <tr><td>BTCドミナンス</td><td class="nu">${fx(D.btcD,1)}％</td></tr>
+      </table></div>`;
+
+  const lk=Object.keys(LOG).sort().reverse();
+  const log=lk.length<2
+    ? `<div class="p rv"><div class="st"><div class="t">まだ ${lk.length} 日分</div>
+        <div class="d">開くたびに、その日の板が自動で記録されます。Deribitは板の履歴を返さないので、撮らなかった日は永久に失われます。<br><br>2日目から前日比が出ます。</div></div></div>`
+    : `<div class="p rv"><div class="ph"><div class="pt">骸の記録</div>
+        <div class="lg">${lk.length}日分／この端末のみ</div></div>
+      <div class="ch">${lnSVG([{d:lk.slice().reverse().map(k=>LOG[k].fl).filter(isFinite),c:'#E8C468',f:v=>nf(v)}],90,false)}</div>
+      <div class="nt">ガンマフリップの推移。板の履歴はどこにも売っていないので、貯めるしかない。</div>
+      <table class="tm"><thead><tr><th>日付</th><th>価格</th><th>フリップ</th><th>RR</th><th>DVOL</th></tr></thead><tbody>
+      ${lk.slice(0,14).map(k=>{const v=LOG[k];return `<tr><td>${k.slice(5)}</td><td>${nf(v.p)}</td>
+        <td class="gd">${nf(v.fl)}</td>
+        <td class="${v.rr==null?'nu':v.rr<-2.5?'neg':'nu'}">${v.rr==null?'—':sg(v.rr,1)}</td>
+        <td class="bn">${fx(v.dv,1)}</td></tr>`;}).join('')}
+      </tbody></table></div>
+      <div class="bar"><button class="b" id="ex">記録を書き出す</button><button class="b" id="cl">記録を消す</button></div>`;
+
+  app.innerHTML=`<div class="pane${TAB==='sub'?' act':''}" id="p-sub">${sub}</div>
+    <div class="pane${TAB==='brd'?' act':''}" id="p-brd">${brd}</div>
+    <div class="pane${TAB==='flw'?' act':''}" id="p-flw">${flw}</div>
+    <div class="pane${TAB==='chn'?' act':''}" id="p-chn">${chn}</div>
+    <div class="pane${TAB==='log'?' act':''}" id="p-log">${log}</div>`;
+  rt.innerHTML=`<b>${25-DEAD.length} 通</b>${DEAD.length?` / <i>${DEAD.length} 閉</i>`:''}<br>${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`;
+  ft.innerHTML=`SOURCE: DERIBIT／BINANCE／COINBASE／BYBIT／OKX／HYPERLIQUID／BITCOIN-DATA／MEMPOOL／ALTERNATIVE.ME／COINGECKO<br>
+    25Δ RR ＝ コールIV − プットIV。負ならプット側が高い（業界標準の向き）<br>
+    GEXはディーラーのコール買い・プット売りを仮定した推計。板から直接読めるものではない<br>
+    OI・L/S比・Taker比は Binance の仕様で30日が上限`;
+
+  const cp=document.getElementById('cp');
+  cp&&cp.addEventListener('click',async()=>{const t=document.getElementById('tx');
+    try{await navigator.clipboard.writeText(t.value); cp.textContent='コピーした';}
+    catch(_){t.select(); t.setSelectionRange(0,99999); cp.textContent='長押しでコピー';}
+    setTimeout(()=>cp.textContent='コピー',2200);});
+  const ex=document.getElementById('ex');
+  ex&&ex.addEventListener('click',()=>{const t=document.createElement('textarea');
+    t.value=JSON.stringify(LOG); t.style.cssText='width:100%;min-height:110px;margin-top:8px';
+    ex.parentNode.appendChild(t); t.select(); ex.textContent='これを保管して';});
+  const cl=document.getElementById('cl');
+  cl&&cl.addEventListener('click',()=>{if(cl.dataset.ok){localStorage.removeItem(LOGK);LOG={};render();}
+    else{cl.dataset.ok='1'; cl.textContent='本当に消す？';}});
+}
+document.querySelectorAll('.tb button').forEach(b=>b.addEventListener('click',()=>{
+  TAB=b.dataset.p;
+  document.querySelectorAll('.tb button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id==='p-'+TAB));}));
+document.getElementById('cur').addEventListener('change',e=>{CUR=e.target.value; load();});
+document.getElementById('rf').addEventListener('click',load);
+LOG=rdLog(); load();
+</script>
+</body>
+</html>
