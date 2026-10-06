@@ -554,7 +554,7 @@ function addLiq(venue,longLiq,usd,px,t){
   tp.prepend(d);while(tp.children.length>12)tp.lastChild.remove();
 }
 /* Binance USDⓈ-M perp: taker flow, mark/index/funding, liquidations */
-feedWS('Binance Perp','wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@forceOrder',()=>{},(s,raw)=>{
+feedWS('Binance Perp','wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@forceOrder',()=>{},(s,raw)=>{
   const m=JSON.parse(raw),d=m.data;if(!d)return;
   if(d.e==='aggTrade'){const q=+d.q;D.perpCvd+=d.m?-q:q;D.perpLast=+d.p}
   else if(d.e==='markPriceUpdate'){D.bnMark=+d.p;D.bnIndex=+d.i;D.bnFund=+d.r;D.bnNext=+d.T}
