@@ -1,0 +1,707 @@
+<title>BTC Flow Core</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: terminal grid — stats | chart | book, then the flow torus with a whale tape, then CVD + volume panels. Single dark look by choice. */
+:root{
+  --bg:#05080d; --panel:#0a1119; --line:#16314a; --fg:#cfe3f2; --dim:#5f7d96;
+  --buy:#22e6b8; --sell:#ff4d6d; --accent:#3aa8ff; --gold:#ffc94a;
+  --perp:#ff9f43; --cb:#e8eef5; --liqL:#b06cff; --liqS:#9fe8ff;
+  --f-display:"Chakra Petch","Share Tech Mono",ui-monospace,monospace;
+  --f-data:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-data);font-size:12px;padding-inline:12px;padding-block:10px 16px;font-variant-numeric:tabular-nums}
+@media (min-width:500px){body{padding-inline:16px}}
+*{box-sizing:border-box}
+.wrap{max-width:1400px;margin:0 auto;display:grid;gap:8px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;border:1px solid var(--line);background:var(--panel);padding:8px 10px}
+.logo{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.06em;color:var(--fg);display:flex;align-items:center;gap:8px}
+.logo b{background:var(--accent);color:var(--bg);padding:2px 6px;font-size:13px}
+.logo small{display:block;font-family:var(--f-data);font-size:9px;letter-spacing:.14em;color:var(--dim);font-weight:400}
+.hstat{display:grid;gap:1px}
+.hstat span{font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.hstat strong{font-family:var(--f-display);font-size:16px;font-weight:500}
+.clock{margin-left:auto;font-family:var(--f-display);font-size:18px}
+.pill{font-size:9px;letter-spacing:.12em;padding:2px 6px;border:1px solid currentColor;text-transform:uppercase}
+.pill.live{color:var(--buy)} .pill.sim{color:var(--gold)}
+.ticker{overflow:hidden;white-space:nowrap;border-block:1px solid var(--line);font-size:10px;letter-spacing:.1em;color:var(--dim);padding:4px 0;text-transform:uppercase}
+.ticker div{display:inline-block;padding-left:100%;animation:tick 60s linear infinite}
+.ticker em{color:var(--buy);font-style:normal} .ticker i{color:var(--sell);font-style:normal}
+@keyframes tick{to{transform:translateX(-100%)}}
+.row{display:grid;gap:8px;grid-template-columns:1fr}
+@media (min-width:900px){
+  .r1{grid-template-columns:240px 1fr 260px}
+  .r2{grid-template-columns:1fr 240px}
+  .r3{grid-template-columns:1fr 1fr}
+  .r4{grid-template-columns:1fr 1.2fr 1fr}
+}
+.panel{border:1px solid var(--line);background:var(--panel);padding:8px 10px;min-width:0;position:relative}
+.ph{display:flex;justify-content:space-between;gap:8px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.ph b{color:var(--fg);font-weight:600}
+.ph b::before{content:"◆ ";color:var(--accent)}
+.big{font-family:var(--f-display);font-size:34px;font-weight:700;line-height:1.05}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-top:10px}
+.kv div span{display:block;font-size:9px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.kv div strong{font-size:14px;font-weight:500}
+.meter{height:6px;background:var(--sell);margin-top:10px;position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--buy);transition:width .4s}
+.mlab{display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-top:3px}
+.up{color:var(--buy)} .dn{color:var(--sell)}
+canvas{display:block;width:100%}
+#cv-price{height:230px} #cv-torus{height:440px} #cv-cvd,#cv-vol,#cv-size{height:150px}
+@media (max-width:600px){#cv-torus{height:340px}}
+.book{display:grid;gap:1px;font-size:11px}
+.book .lv{display:grid;grid-template-columns:1fr 1fr 1fr;position:relative;padding:1px 4px}
+.book .lv i{position:absolute;top:0;bottom:0;right:0;opacity:.22}
+.book .a i{background:var(--sell)} .book .b i{background:var(--buy)}
+.book .lv span{position:relative;text-align:right} .book .lv span:first-child{text-align:left}
+.book .a span:first-child{color:var(--sell)} .book .b span:first-child{color:var(--buy)}
+.spread{text-align:center;padding:4px;border-block:1px dashed var(--line);font-size:10px;color:var(--dim)}
+.spread strong{font-family:var(--f-display);font-size:15px;color:var(--fg)}
+.tape{display:grid;gap:4px;max-height:440px;overflow:hidden}
+.fill{border:1px solid var(--line);padding:4px 6px;display:grid;grid-template-columns:auto 1fr;gap:0 8px;font-size:10px;animation:pop .5s ease-out}
+.fill.b{border-left:3px solid var(--buy)} .fill.s{border-left:3px solid var(--sell)}
+.fill .usd{grid-row:span 2;font-family:var(--f-display);font-size:15px;align-self:center}
+.fill.whale{background:rgba(255,201,74,.08);border-color:var(--gold)}
+.fill .meta{color:var(--dim);text-align:right}
+@keyframes pop{from{transform:translateX(20px);opacity:.2}}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.foot{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-top:8px}
+.foot div{border:1px solid var(--line);padding:4px 6px}
+.foot span{display:block;font-size:9px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.foot strong{font-family:var(--f-display);font-size:15px;font-weight:500}
+.note{font-size:10px;color:var(--dim);line-height:1.5}
+.feeds{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.feeds>span{font-size:9px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-right:4px}
+.feeds button{font:500 11px var(--f-data);color:var(--dim);background:transparent;border:1px solid var(--line);padding:5px 10px;cursor:pointer;letter-spacing:.06em}
+.feeds button:hover{color:var(--fg);border-color:var(--accent)}
+.feeds button[aria-pressed="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.feeds button:focus-visible,.feeds input:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.feeds label{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.feeds input{width:120px;font:500 12px var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:4px 6px}
+.golive{display:inline-flex;align-items:center;gap:6px;font:600 12px var(--f-data);letter-spacing:.06em;color:var(--bg);background:var(--buy);padding:6px 12px;text-decoration:none;border:1px solid var(--buy)}
+.snapbtn{font:600 12px var(--f-data);letter-spacing:.06em;color:var(--bg);background:var(--gold);border:1px solid var(--gold);padding:6px 12px;cursor:pointer}
+.snapbtn:hover{background:transparent;color:var(--gold)}
+.snapbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.snapbox{width:100%;margin-top:8px;font:11px/1.5 var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--gold);padding:8px;resize:vertical}
+.golive:hover{background:transparent;color:var(--buy)}
+.golive:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.status{font-size:11px;color:var(--gold);line-height:1.5}
+.status.ok{color:var(--buy)}
+.venues{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line);color:var(--dim)}
+.chip::before{content:"● "}
+.chip.on{color:var(--buy);border-color:var(--buy)} .chip.off{color:var(--sell)} .chip.wait{color:var(--gold)}
+.tiles{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.tile{border:1px solid var(--line);background:var(--panel);padding:7px 10px;min-width:0;display:grid;gap:2px}
+.tile span{font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.tile strong{font-family:var(--f-display);font-size:19px;font-weight:500}
+.tile em{font-style:normal;font-size:10px;color:var(--dim);overflow-wrap:anywhere}
+.liqL{color:var(--liqL)} .liqS{color:var(--liqS)}
+.lqbar{height:8px;background:var(--liqS);position:relative;margin:6px 0 3px}
+.lqbar i{position:absolute;inset:0 auto 0 0;background:var(--liqL);transition:width .4s}
+.lqtape{display:grid;gap:4px;margin-top:8px;max-height:300px;overflow:hidden}
+.lq{border:1px solid var(--line);padding:4px 6px;display:grid;grid-template-columns:auto 1fr;gap:0 8px;font-size:10px;animation:pop .5s ease-out}
+.lq b{grid-row:span 2;font-family:var(--f-display);font-size:15px;font-weight:500;align-self:center}
+.lq span{text-align:right} .lq .meta{color:var(--dim)}
+.lq.l{border-left:3px solid var(--liqL)} .lq.l b{color:var(--liqL)}
+.lq.s{border-left:3px solid var(--liqS)} .lq.s b{color:var(--liqS)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:var(--dim);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:3px;vertical-align:middle;margin-right:4px}
+#cv-cvd3,#cv-oi{height:190px}
+.ticker b{color:var(--liqL);font-weight:500}
+@media (prefers-reduced-motion:reduce){.ticker div,.fill{animation:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="logo"><b>₿</b><div>BTC // FLOW CORE<small id="h-sub">AGGRESSOR FLOW · TORUS VIEW</small></div></div>
+    <div class="hstat"><span>Last</span><strong id="h-last">—</strong></div>
+    <div class="hstat"><span>CVD (session)</span><strong id="h-cvd">—</strong></div>
+    <div class="hstat"><span>Trades/min</span><strong id="h-tpm">—</strong></div>
+    <div class="hstat"><span>Feed</span><span id="h-mode" class="pill sim">connecting…</span></div>
+    <div class="clock" id="clock">--:--:-- JST</div>
+  </header>
+  <div class="panel">
+    <div class="feeds" role="group" aria-label="データフィード">
+      <span>Feed</span>
+      <button id="fd-edgex" data-feed="edgex" aria-pressed="false">edgeX · BTCUSD Perp</button>
+      <button id="fd-bitbank" data-feed="bitbank" aria-pressed="false">bitbank · BTC/JPY</button>
+      <button id="fd-binance" data-feed="binance" aria-pressed="false">Binance · BTCUSDT</button>
+      <label for="sim-seed">SIM基準価格 <input id="sim-seed" type="number" inputmode="decimal"></label>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:8px"><button type="button" class="snapbtn" id="snapbtn">📋 クロちゃん用コピー</button><a class="golive" id="golive" href="https://machaki69.github.io/ibirujo-v2/btc-flow-core.html#edgex" target="_blank" rel="noopener">● ライブ版を開く ↗</a><p class="status" id="status" style="margin:0;flex:1;min-width:0">接続中…</p></div>
+    <textarea id="snapbox" class="snapbox" rows="10" readonly hidden aria-label="スナップショット"></textarea>
+    <div class="venues" id="venues"></div>
+  </div>
+  <div class="ticker"><div id="ticker">Waiting for flow…</div></div>
+  <section class="tiles" aria-label="デリバティブ指標">
+    <div class="tile"><span>Funding · Binance</span><strong id="d-fbn">—</strong><em id="d-fbn2">接続待ち</em></div>
+    <div class="tile"><span>Funding · Bybit</span><strong id="d-fby">—</strong><em id="d-fby2">接続待ち</em></div>
+    <div class="tile"><span>Basis · perp − index</span><strong id="d-basis">—</strong><em id="d-basis2">接続待ち</em></div>
+    <div class="tile"><span>OI · Bybit</span><strong id="d-oiby">—</strong><em id="d-oiby2">接続待ち</em></div>
+    <div class="tile"><span>OI · Binance</span><strong id="d-oibn">—</strong><em id="d-oibn2">接続待ち</em></div>
+    <div class="tile"><span>Coinbase Premium</span><strong id="d-cbp">—</strong><em id="d-cbp2">接続待ち</em></div>
+    <div class="tile"><span>DVOL · Deribit</span><strong id="d-dvol">—</strong><em id="d-dvol2">接続待ち</em></div>
+    <div class="tile"><span>L/S口座比 · Binance 5m</span><strong id="d-ls">—</strong><em id="d-ls2">接続待ち</em></div>
+  </section>
+
+  <section class="row r1">
+    <div class="panel">
+      <div class="ph"><b>Session</b><span id="p-dir">—</span></div>
+      <div class="big" id="p-last">—</div>
+      <div id="p-chg" class="note">—</div>
+      <div class="meter"><i id="m-buy" style="width:50%"></i></div>
+      <div class="mlab"><span>Taker buy <b id="m-bp">50%</b></span><span>Taker sell</span></div>
+      <div class="kv">
+        <div><span>Buy vol</span><strong class="up" id="k-bv">0</strong></div>
+        <div><span>Sell vol</span><strong class="dn" id="k-sv">0</strong></div>
+        <div><span>Avg size</span><strong id="k-avg">—</strong></div>
+        <div><span>Whale fills</span><strong id="k-wh">0</strong></div>
+        <div><span>Realized vol</span><strong id="k-rv">—</strong></div>
+        <div><span>Hi / Lo</span><strong id="k-hl">—</strong></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><b id="t-chart">BTC · 10s bars</b><span id="p-range">—</span></div>
+      <canvas id="cv-price"></canvas>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>Order book</b><span id="p-imb">imb —</span></div>
+      <div class="book" id="asks"></div>
+      <div class="spread"><strong id="mid">—</strong> · spread <span id="spr">—</span></div>
+      <div class="book" id="bids"></div>
+    </div>
+  </section>
+
+  <section class="row r2">
+    <div class="panel">
+      <div class="ph"><b>Flow core · every taker fill lands on the ring</b><span>teal = buy · red = sell · gold = whale · purple/ice = 清算 · 尾の長さ＝約定金額</span></div>
+      <canvas id="cv-torus"></canvas>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>Large fills</b><span id="t-whale">≥ $50k</span></div>
+      <div class="tape" id="tape"><div class="note">Fills of $50k or more appear here.</div></div>
+    </div>
+  </section>
+
+  <section class="row r4">
+    <div class="panel">
+      <div class="ph"><b>Liquidations · Binance + Bybit + OKX</b><span id="lq-n">0件</span></div>
+      <div class="split" style="font-size:11px"><div><span class="liqL">ロング清算</span><br><strong class="liqL" id="lq-l" style="font-family:var(--f-display);font-size:18px">$0</strong></div><div style="text-align:right"><span class="liqS">ショート清算</span><br><strong class="liqS" id="lq-s" style="font-family:var(--f-display);font-size:18px">$0</strong></div></div>
+      <div class="lqbar"><i id="lq-bar" style="width:50%"></i></div>
+      <div class="note" id="lq-5">直近5分 —</div>
+      <div class="lqtape" id="liqtape"><div class="note">清算が起きるとここに流れます。トーラスにも紫（ロング清算）と水色（ショート清算）で飛び込みます。</div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>CVD比較 · 現物 vs 先物 vs Coinbase</b><span>10秒ごと</span></div>
+      <canvas id="cv-cvd3"></canvas>
+      <div class="legend"><span><i style="background:var(--accent)"></i>現物（選択中フィード）</span><span><i style="background:var(--perp)"></i>Binance先物</span><span><i style="background:var(--cb)"></i>Coinbase</span></div>
+      <p class="note">左端を0にそろえて傾きを比べます。先物だけ上がって現物がついてこない上げは、レバレッジ主導のサインです。</p>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>建玉（OI）推移</b><span>10秒ごと</span></div>
+      <canvas id="cv-oi"></canvas>
+      <div class="legend"><span><i style="background:var(--perp)"></i>Bybit</span><span><i style="background:var(--accent)"></i>Binance</span></div>
+      <p class="note">価格↑×OI↑は新規ロング、価格↓×OI↓はロングの投げ。</p>
+    </div>
+  </section>
+
+  <section class="row r3">
+    <div class="panel">
+      <div class="ph"><b>Cumulative volume delta</b><span id="cvd-now">—</span></div>
+      <canvas id="cv-cvd"></canvas>
+      <div class="foot">
+        <div><span>Δ last bar</span><strong id="f-d">—</strong></div>
+        <div><span>Δ last 1m</span><strong id="f-d1">—</strong></div>
+        <div><span>Bars up</span><strong id="f-up">—</strong></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="split">
+        <div style="min-width:0"><div class="ph"><b>Buy/sell per bar</b></div><canvas id="cv-vol"></canvas></div>
+        <div style="min-width:0"><div class="ph"><b>Fill size dist.</b></div><canvas id="cv-size"></canvas></div>
+      </div>
+      <p class="note" id="srcnote"></p>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const css=getComputedStyle(document.documentElement);
+const C={buy:css.getPropertyValue('--buy').trim(),sell:css.getPropertyValue('--sell').trim(),acc:css.getPropertyValue('--accent').trim(),gold:css.getPropertyValue('--gold').trim(),dim:css.getPropertyValue('--dim').trim(),line:css.getPropertyValue('--line').trim(),fg:css.getPropertyValue('--fg').trim(),perp:css.getPropertyValue('--perp').trim(),cb:css.getPropertyValue('--cb').trim(),liqL:css.getPropertyValue('--liqL').trim(),liqS:css.getPropertyValue('--liqS').trim()};
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const BAR_MS=10000, MAX_BARS=60;
+/* Per-feed settings. fx = rough quote→USD divisor, used only for sizing bins/particles. */
+const FEEDS={
+  edgex:{name:'edgeX',pair:'BTCUSD Perp',sym:'$',dec:1,fx:1,whale:50000,big:250000,seed:86000},
+  bitbank:{name:'bitbank',pair:'BTC/JPY',sym:'¥',dec:0,fx:150,whale:7.5e6,big:3.75e7,seed:12900000},
+  binance:{name:'Binance',pair:'BTCUSDT',sym:'$',dec:1,fx:1,whale:50000,big:250000,seed:86000}
+};
+let F=FEEDS.edgex,feedKey='edgex',ws=null,simTimer=null,connTimer=null,gen=0;
+let S;
+function resetState(){S={mode:'—',last:0,open:0,hi:-Infinity,lo:Infinity,bars:[],cvd:0,bv:0,sv:0,n:0,notional:0,wh:0,times:[],book:{bids:[],asks:[]},sizeBins:new Array(16).fill(0),rets:[],prev:0,events:[]}}
+resetState();
+
+/* ---------- helpers ---------- */
+const f0=n=>n.toLocaleString('en-US',{maximumFractionDigits:0});
+const f1=n=>n.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+const fp=n=>F.dec?f1(n):f0(n);
+const fu=n=>{const a=Math.abs(n),s=F.sym;return (n<0?'-':'')+(a>=1e8&&s==='¥'?s+(a/1e8).toFixed(2)+'億':a>=1e6?s+(a/1e6).toFixed(2)+'M':a>=1e3?s+(a/1e3).toFixed(1)+'k':s+a.toFixed(0))};
+const fb=n=>(n>=0?'+':'')+n.toFixed(2)+' ₿';
+function fit(cv){const r=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(cv.width!==Math.round(w*r)||cv.height!==Math.round(h*r)){cv.width=Math.round(w*r);cv.height=Math.round(h*r)}const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return [x,w,h]}
+
+/* ---------- ingest ---------- */
+function onTrade(p,q,isBuy,t){
+  if(!(p>0&&q>0))return;
+  if(!S.open){S.open=p;S.prev=p}
+  S.last=p;S.hi=Math.max(S.hi,p);S.lo=Math.min(S.lo,p);
+  const amt=p*q,usd=amt/F.fx;S.n++;S.notional+=amt;S.times.push(Date.now());
+  if(isBuy){S.bv+=q;S.cvd+=q}else{S.sv+=q;S.cvd-=q}
+  const bi=Math.max(0,Math.min(15,Math.floor(Math.log10(Math.max(usd,1))*2.4-4)));S.sizeBins[bi]++;
+  const k=Math.floor(t/BAR_MS)*BAR_MS;let b=S.bars[S.bars.length-1];
+  if(!b||k>b.t){
+    if(b){S.rets.push(Math.log(b.c/b.o||1));if(S.rets.length>60)S.rets.shift()}
+    b={t:k,o:p,h:p,l:p,c:p,bv:0,sv:0,cvd:S.cvd};S.bars.push(b);if(S.bars.length>MAX_BARS)S.bars.shift();
+  }
+  b.h=Math.max(b.h,p);b.l=Math.min(b.l,p);b.c=p;if(isBuy)b.bv+=q;else b.sv+=q;b.cvd=S.cvd;
+  Torus.spawn(isBuy,usd);
+  if(amt>=F.whale)addFill(p,q,amt,isBuy,t);
+}
+function addFill(p,q,amt,isBuy,t){
+  const big=amt>=F.big;S.lf=(S.lf||0)+1;
+  if(big){S.wh++;S.events.unshift((isBuy?'<em>':'<i>')+`WHALE ${isBuy?'BUY':'SELL'} ${fu(amt)} @ ${fp(p)}`+(isBuy?'</em>':'</i>'));S.events=S.events.slice(0,8)}
+  const tape=$('tape');if(tape.firstElementChild&&tape.firstElementChild.classList.contains('note'))tape.innerHTML='';
+  const d=document.createElement('div');d.className='fill '+(isBuy?'b':'s')+(big?' whale':'');
+  const tm=new Date(t).toLocaleTimeString('ja-JP',{hour12:false,timeZone:'Asia/Tokyo'});
+  d.innerHTML=`<span class="usd ${isBuy?'up':'dn'}">${fu(amt)}</span><span class="meta">${isBuy?'BUY':'SELL'} ${q.toFixed(3)} ₿</span><span class="meta">${fp(p)} · ${tm}</span>`;
+  tape.prepend(d);while(tape.children.length>14)tape.lastChild.remove();
+}
+function setBook(bids,asks){
+  bids=bids.filter(l=>l[1]>0).sort((a,b)=>b[0]-a[0]).slice(0,10);
+  asks=asks.filter(l=>l[1]>0).sort((a,b)=>a[0]-b[0]).slice(0,10);
+  if(bids.length&&asks.length)S.book={bids,asks};
+}
+function setStatus(mode,msg){
+  S.mode=mode;const el=$('h-mode'),st=$('status');
+  if(mode==='LIVE'){el.textContent='LIVE · '+F.name;el.className='pill live';st.className='status ok'}
+  else if(mode==='SIM'){el.textContent='SIM';el.className='pill sim';st.className='status'}
+  else{el.textContent='connecting…';el.className='pill sim';st.className='status'}
+  st.textContent=msg;
+}
+
+/* ---------- simulated feed ---------- */
+let simMid=86000,simVol=1;
+function startSim(reason){
+  clearTimeout(simTimer);
+  setStatus('SIM',`${F.name}に接続できないため、SIM（シミュレーション）で表示中です。${reason} 価格は「SIM基準価格」から始まるランダムウォークで、実際の相場ではありません。`);
+  const my=gen;simMid=+$('sim-seed').value||F.seed;
+  const tick=F.dec?0.1:1,scale=F.fx;
+  const step=()=>{
+    if(my!==gen)return;
+    if(Math.random()<.004)simVol=1+Math.random()*4; simVol+=(1-simVol)*.01;
+    const burst=simVol>2.2;
+    const isBuy=Math.random()<.5+Math.sin(Date.now()/40000)*.12;
+    const q=Math.min(40,Math.exp(Math.random()*Math.random()*7.2-5.5)*(burst?3:1));
+    simMid+=((isBuy?1:-1)*(.2+q*1.8)*simVol*Math.random()+(Math.random()-.5)*2*simVol)*scale;
+    const p=Math.round(simMid/tick)*tick;
+    onTrade(p,q,isBuy,Date.now());
+    const bids=[],asks=[];
+    for(let i=0;i<10;i++){asks.push([p+tick+i*(1+Math.random()*3)*scale,Math.exp(Math.random()*3-2.2)*(1+i*.3)]);bids.push([p-i*(1+Math.random()*3)*scale,Math.exp(Math.random()*3-2.2)*(1+i*.3)])}
+    setBook(bids,asks);
+    simTimer=setTimeout(step,(burst?25:70)+Math.random()*(burst?60:180));
+  };step();
+}
+
+/* ---------- live connectors ---------- */
+const BLOCKED='（Claudeのアーティファクト内では外部への接続がブロックされます。GitHub Pagesなど自分のサイトに置けばライブで動きます）';
+function openWS(urls,handlers){
+  const my=gen;let i=0;
+  const tryNext=()=>{
+    if(my!==gen)return;
+    if(i>=urls.length)return startSim(BLOCKED);
+    const url=urls[i++];let opened=false,sock;
+    try{sock=new WebSocket(url)}catch(e){return tryNext()}
+    ws=sock;
+    connTimer=setTimeout(()=>{if(!opened){try{sock.close()}catch(e){}tryNext()}},4500);
+    sock.onopen=()=>{if(my!==gen)return sock.close();opened=true;clearTimeout(connTimer);setStatus('LIVE',`${F.name} ${F.pair} にライブ接続中（テイカー約定＋板）。`);handlers.open(sock)};
+    sock.onmessage=e=>{if(my!==gen)return;try{handlers.msg(sock,e.data)}catch(err){console.warn(err)}};
+    sock.onerror=()=>{};
+    sock.onclose=()=>{if(my!==gen)return;clearTimeout(connTimer);if(!opened)tryNext();else startSim('（ライブ接続が切れました）')};
+  };tryNext();
+}
+/* edgeX: public quote websocket. contractId 10000001 = BTCUSD perpetual. */
+function connEdgex(){
+  const CID='10000001';const bk={b:new Map(),a:new Map()};
+  const lv=x=>Array.isArray(x)?[+x[0],+x[1]]:[+x.price,+x.size];
+  openWS(['wss://quote.edgex.exchange/api/v1/public/ws','wss://edgex-quote-prod-v2.edgex.exchange/api/v1/public/ws'],{
+    open(s){s.send(JSON.stringify({type:'subscribe',channel:'trades.'+CID}));s.send(JSON.stringify({type:'subscribe',channel:'depth.'+CID+'.15'}))},
+    msg(s,raw){
+      const m=JSON.parse(raw);
+      if(m.type==='ping'){s.send(JSON.stringify({type:'pong',time:m.time}));return}
+      if(m.type!=='quote-event'||!m.content)return;
+      const ch=m.channel||m.content.channel||'',snap=String(m.content.dataType||'').toLowerCase()==='snapshot',data=m.content.data||[];
+      if(ch.startsWith('trades')){
+        if(snap)return; /* skip the history dump on subscribe */
+        data.slice().sort((a,b)=>(+a.time||+a.timestamp||0)-(+b.time||+b.timestamp||0)).forEach(t=>{
+          const isBuy=t.side!=null?String(t.side).toUpperCase()==='BUY':(t.isBuyerMaker!=null?!(t.isBuyerMaker===true||t.isBuyerMaker==='true'):true);
+          onTrade(+t.price,+(t.size??t.qty),isBuy,+t.time||+t.timestamp||Date.now());
+        });
+      }else if(ch.startsWith('depth')){
+        const d=data[0];if(!d)return;
+        if(snap||String(d.depthType||'').toUpperCase()==='SNAPSHOT'){bk.b.clear();bk.a.clear()}
+        (d.bids||[]).map(lv).forEach(([p,q])=>q>0?bk.b.set(p,q):bk.b.delete(p));
+        (d.asks||[]).map(lv).forEach(([p,q])=>q>0?bk.a.set(p,q):bk.a.delete(p));
+        setBook([...bk.b],[...bk.a]);
+      }
+    }
+  });
+}
+/* bitbank: Socket.IO (EIO=4) over a raw websocket. */
+function connBitbank(){
+  openWS(['wss://stream.bitbank.cc/socket.io/?EIO=4&transport=websocket'],{
+    open(){},
+    msg(s,raw){
+      if(raw==='2'){s.send('3');return}
+      if(raw[0]==='0'){s.send('40');return}
+      if(raw.startsWith('40')){s.send('42["join-room","transactions_btc_jpy"]');s.send('42["join-room","depth_whole_btc_jpy"]');return}
+      if(!raw.startsWith('42'))return;
+      const [ev,p]=JSON.parse(raw.slice(2));if(ev!=='message'||!p)return;
+      const room=p.room_name,d=p.message&&p.message.data;if(!d)return;
+      if(room==='transactions_btc_jpy')(d.transactions||[]).slice().sort((a,b)=>a.executed_at-b.executed_at).forEach(t=>onTrade(+t.price,+t.amount,t.side==='buy',t.executed_at));
+      else if(room==='depth_whole_btc_jpy')setBook(d.bids.map(x=>[+x[0],+x[1]]),d.asks.map(x=>[+x[0],+x[1]]));
+    }
+  });
+}
+function connBinance(){
+  openWS(['wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms'],{
+    open(){},
+    msg(s,raw){const m=JSON.parse(raw),d=m.data;if(!d)return;
+      if(m.stream.endsWith('aggTrade'))onTrade(+d.p,+d.q,!d.m,d.T);
+      else setBook(d.bids.map(x=>[+x[0],+x[1]]),d.asks.map(x=>[+x[0],+x[1]]));}
+  });
+}
+function selectFeed(key){
+  gen++;clearTimeout(simTimer);clearTimeout(connTimer);try{ws&&ws.close()}catch(e){}ws=null;
+  feedKey=FEEDS[key]?key:'edgex';F=FEEDS[feedKey];resetState();
+  try{localStorage.setItem('flowcore-feed',feedKey)}catch(e){}
+  document.querySelectorAll('[data-feed]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.feed===feedKey)));
+  let seed=null;try{seed=localStorage.getItem('flowcore-seed-'+feedKey)}catch(e){}
+  $('sim-seed').value=seed||F.seed;$('sim-seed').step=F.dec?'100':'10000';
+  $('h-sub').textContent=`AGGRESSOR FLOW · ${F.name} ${F.pair}`;
+  $('t-chart').textContent=`${F.pair} · 10s bars`;$('t-whale').textContent='≥ '+fu(F.whale);
+  $('tape').innerHTML=`<div class="note">${fu(F.whale)}以上の約定がここに出ます。</div>`;
+  $('srcnote').textContent=`サイズ分布の金色は大口（${fu(F.whale)}以上）。CVD・売買比率はこのページを開いてからの累計です。`;
+  $('golive').href='https://machaki69.github.io/ibirujo-v2/btc-flow-core.html#'+feedKey;
+  setStatus('—',`${F.name}に接続中…`);
+  ({edgex:connEdgex,bitbank:connBitbank,binance:connBinance})[feedKey]();
+}
+document.querySelectorAll('[data-feed]').forEach(b=>b.addEventListener('click',()=>selectFeed(b.dataset.feed)));
+$('sim-seed').addEventListener('change',e=>{const v=+e.target.value;if(!(v>0))return;try{localStorage.setItem('flowcore-seed-'+feedKey,String(v))}catch(err){}
+  if(S.mode==='SIM'){gen++;clearTimeout(simTimer);resetState();startSim(BLOCKED)}});
+
+/* ---------- torus ---------- */
+const Torus=(()=>{
+  const cv=$('cv-torus');const pts=[];const NU=72,NV=26;
+  for(let i=0;i<NU;i++)for(let j=0;j<NV;j++)pts.push({u:i/NU*Math.PI*2,v:j/NV*Math.PI*2,e:0,c:0});
+  const parts=[];let rot=0,heat=0,flash=0,flashC='#ffc94a';
+  function proj(u,v,w,h,R,r){
+    const x=(R+r*Math.cos(v))*Math.cos(u+rot),z=(R+r*Math.cos(v))*Math.sin(u+rot),y=r*Math.sin(v);
+    const tilt=1.08,cy=Math.cos(tilt),sy=Math.sin(tilt);const y2=y*cy-z*sy,z2=y*sy+z*cy;
+    const f=520/(520+z2);return [w*.5+x*f,h*.52+y2*f,f,z2];
+  }
+  function spawn(isBuy,usd,kind){
+    const lane=Math.random();const target=Math.floor(Math.random()*pts.length);
+    const sz=Math.min(1,Math.log10(Math.max(usd,10))/6.5);
+    const whale=usd>=F.big/F.fx;
+    /* bigger fill = slower flight + longer tail */
+    parts.push({buy:isBuy,lane,target,t:0,sp:.024-sz*.016+Math.random()*.003,sz,whale,kind,tl:Math.round(5+sz*sz*46+(whale||kind?14:0)),trail:[]});
+    if(parts.length>260)parts.shift();
+    heat+= (isBuy?1:-1)*sz*.4; if(usd>=F.big/F.fx||(kind&&usd>=100000)){flash=1;flashC=kind==='liqL'?C.liqL:kind==='liqS'?C.liqS:C.gold}
+  }
+  function draw(){
+    const [x,w,h]=fit(cv);x.clearRect(0,0,w,h);
+    const R=Math.min(w*.26,h*.62),r=R*.36;rot+=RM?.0006:.0035;heat*=.985;flash*=.93;
+    // faint grid
+    x.strokeStyle=C.line;x.globalAlpha=.35;x.lineWidth=1;
+    for(let gx=0;gx<w;gx+=40){x.beginPath();x.moveTo(gx,0);x.lineTo(gx,h);x.stroke()}
+    x.globalAlpha=1;
+    x.globalCompositeOperation='lighter';
+    const proj2=[];
+    for(const p of pts){p.e*=.94;const q=proj(p.u,p.v,w,h,R,r);proj2.push(q);
+      const depth=(q[2]-.6)*1.4;const a=Math.max(.08,Math.min(1,.25+depth*.5+p.e));
+      x.fillStyle=p.e>.05?(p.c>0?C.buy:C.sell):C.acc;x.globalAlpha=a*(p.e>.05?1:.55);
+      const s=(1.1+p.e*2.4)*q[2];x.fillRect(q[0]-s/2,q[1]-s/2,s,s)}
+    // particles
+    for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.t+=p.sp*(RM?.5:1);
+      const tq=proj2[p.target];const sx=p.buy?-10:w+10,sy=h*(.08+p.lane*.84);
+      const cx=p.buy?w*.22:w*.78,cy=sy*.6+tq[1]*.4;const t=Math.min(1,p.t),it=1-t;
+      const px=it*it*sx+2*it*t*cx+t*t*tq[0],py=it*it*sy+2*it*t*cy+t*t*tq[1];
+      p.trail.push([px,py]);while(p.trail.length>p.tl)p.trail.shift();
+      const col=p.kind==='liqL'?C.liqL:p.kind==='liqS'?C.liqS:p.whale?C.gold:(p.buy?C.buy:C.sell);
+      x.strokeStyle=col;x.lineWidth=.6+p.sz*1.8;
+      for(let k=1;k<p.trail.length;k++){x.globalAlpha=.6*k/p.trail.length;x.beginPath();x.moveTo(p.trail[k-1][0],p.trail[k-1][1]);x.lineTo(p.trail[k][0],p.trail[k][1]);x.stroke()}
+      x.globalAlpha=1;x.fillStyle=col;x.beginPath();x.arc(px,py,1+p.sz*3,0,7);x.fill();
+      if(p.t>=1){const tg=pts[p.target];
+        for(let k=-3;k<=3;k++)for(let m=-2;m<=2;m++){const idx=((Math.floor(p.target/NV)+k+NU)%NU)*NV+((p.target%NV)+m+NV)%NV;const pp=pts[idx];pp.e=Math.min(1.4,pp.e+(p.whale?1:.5)*p.sz*(1-Math.hypot(k,m)/4.5));pp.c=p.buy?1:-1}
+        parts.splice(i,1)}
+    }
+    x.globalCompositeOperation='source-over';x.globalAlpha=1;
+    // center readout
+    x.textAlign='center';x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';
+    x.fillText('NET TAKER PRESSURE',w/2,h*.52-14);
+    x.font='600 22px "Chakra Petch",monospace';x.fillStyle=heat>=0?C.buy:C.sell;
+    x.fillText((heat>=0?'+':'')+heat.toFixed(2),w/2,h*.52+8);
+    if(flash>.05){x.globalAlpha=flash*.6;x.strokeStyle=flashC;x.lineWidth=2;x.beginPath();x.ellipse(w/2,h*.52,R*1.5*(1.1-flash*.1),R*.75,0,0,7);x.stroke();x.globalAlpha=1}
+    x.textAlign='left';x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';
+    x.fillText('◀ TAKER BUYS',8,14);x.textAlign='right';x.fillText('TAKER SELLS ▶',w-8,14);
+  }
+  return {spawn,draw};
+})();
+
+/* ---------- charts ---------- */
+function drawPrice(){
+  const [x,w,h]=fit($('cv-price'));x.clearRect(0,0,w,h);const B=S.bars;if(!B.length)return;
+  const padR=F.dec?58:72,padB=14,cw=w-padR;let hi=-Infinity,lo=Infinity;B.forEach(b=>{hi=Math.max(hi,b.h);lo=Math.min(lo,b.l)});
+  const pad=(hi-lo)*.12||5;hi+=pad;lo-=pad;const Y=v=>(hi-v)/(hi-lo)*(h-padB);
+  x.strokeStyle=C.line;x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';x.textAlign='left';
+  for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4,y=Y(v);x.globalAlpha=.5;x.beginPath();x.moveTo(0,y);x.lineTo(cw,y);x.stroke();x.globalAlpha=1;x.fillText(fp(v),cw+4,y+3)}
+  const bw=cw/MAX_BARS;B.forEach((b,i)=>{const cx=(i+MAX_BARS-B.length)*bw+bw/2;const up=b.c>=b.o;x.strokeStyle=x.fillStyle=up?C.buy:C.sell;
+    x.beginPath();x.moveTo(cx,Y(b.h));x.lineTo(cx,Y(b.l));x.stroke();const y1=Y(Math.max(b.o,b.c)),y2=Y(Math.min(b.o,b.c));x.fillRect(cx-bw*.32,y1,bw*.64,Math.max(1,y2-y1))});
+  const ly=Y(S.last);x.setLineDash([3,3]);x.strokeStyle=C.gold;x.beginPath();x.moveTo(0,ly);x.lineTo(cw,ly);x.stroke();x.setLineDash([]);
+  x.fillStyle=C.gold;x.fillRect(cw+1,ly-8,padR-1,16);x.fillStyle='#05080d';x.font='600 10px "IBM Plex Mono",monospace';x.fillText(fp(S.last),cw+4,ly+4);
+  x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';x.fillText('-10m',2,h-2);x.textAlign='right';x.fillText('now',cw-2,h-2);
+  $('p-range').textContent=`H ${fp(hi-pad)} · L ${fp(lo+pad)}`;
+}
+function drawCVD(){
+  const [x,w,h]=fit($('cv-cvd'));x.clearRect(0,0,w,h);const B=S.bars;if(B.length<2)return;
+  const vals=B.map(b=>b.cvd);let hi=Math.max(...vals,0),lo=Math.min(...vals,0);const pd=(hi-lo)*.1||1;hi+=pd;lo-=pd;
+  const X=i=>(i+MAX_BARS-B.length)/(MAX_BARS-1)*(w-50),Y=v=>(hi-v)/(hi-lo)*h;
+  x.strokeStyle=C.line;x.beginPath();x.moveTo(0,Y(0));x.lineTo(w-50,Y(0));x.stroke();
+  const g=x.createLinearGradient(0,0,0,h);g.addColorStop(0,C.buy+'55');g.addColorStop(Y(0)/h,C.buy+'08');g.addColorStop(Math.min(1,Y(0)/h+.001),C.sell+'08');g.addColorStop(1,C.sell+'55');
+  x.beginPath();x.moveTo(X(0),Y(0));vals.forEach((v,i)=>x.lineTo(X(i),Y(v)));x.lineTo(X(vals.length-1),Y(0));x.fillStyle=g;x.fill();
+  x.beginPath();vals.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.strokeStyle=C.acc;x.lineWidth=1.5;x.stroke();x.lineWidth=1;
+  const lv=vals[vals.length-1];x.fillStyle=lv>=0?C.buy:C.sell;x.beginPath();x.arc(X(vals.length-1),Y(lv),3,0,7);x.fill();
+  x.font='9px "IBM Plex Mono",monospace';x.fillStyle=C.dim;x.textAlign='left';x.fillText(fb(hi-pd),w-48,10);x.fillText(fb(lo+pd),w-48,h-3);x.fillText('0',w-48,Y(0)+3);
+}
+function drawVol(){
+  const [x,w,h]=fit($('cv-vol'));x.clearRect(0,0,w,h);const B=S.bars.slice(-30);if(!B.length)return;
+  const mx=Math.max(...B.map(b=>Math.max(b.bv,b.sv)),.01);const bw=w/30,mid=h/2;
+  x.strokeStyle=C.line;x.beginPath();x.moveTo(0,mid);x.lineTo(w,mid);x.stroke();
+  B.forEach((b,i)=>{const cx=(i+30-B.length)*bw;x.fillStyle=C.buy;const hb=b.bv/mx*(mid-4);x.fillRect(cx+1,mid-hb,bw-2,hb);x.fillStyle=C.sell;const hs=b.sv/mx*(mid-4);x.fillRect(cx+1,mid,bw-2,hs)});
+  x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';x.fillText('BUY',2,10);x.fillText('SELL',2,h-3);x.textAlign='right';x.fillText(mx.toFixed(1)+' ₿',w-2,10);x.textAlign='left';
+}
+function drawSize(){
+  const [x,w,h]=fit($('cv-size'));x.clearRect(0,0,w,h);const bins=S.sizeBins;const mx=Math.max(...bins,1);const bw=w/bins.length;
+  bins.forEach((c,i)=>{const bh=c/mx*(h-18);const usd=Math.pow(10,(i+4)/2.4);x.fillStyle=usd>=F.whale/F.fx?C.gold:C.acc;x.globalAlpha=usd>=F.whale/F.fx?1:.75;x.fillRect(i*bw+1,h-14-bh,bw-2,bh)});
+  x.globalAlpha=1;x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';x.fillText('≈$100',0,h-2);x.textAlign='center';x.fillText('≈$10k',(Math.log10(1e4)*2.4-4)*bw,h-2);x.textAlign='right';x.fillText('≈$1M+',w,h-2);x.textAlign='left';
+}
+function renderBook(){
+  const {bids,asks}=S.book;if(!bids.length)return;const mx=Math.max(...bids.map(b=>b[1]),...asks.map(a=>a[1]));
+  const row=(l,cls)=>`<div class="lv ${cls}"><i style="width:${(l[1]/mx*100).toFixed(1)}%"></i><span>${fp(l[0])}</span><span>${l[1]>=0.001?l[1].toFixed(3):l[1].toFixed(5)}</span><span>${fu(l[0]*l[1])}</span></div>`;
+  $('asks').innerHTML=asks.slice(0,8).reverse().map(a=>row(a,'a')).join('');$('bids').innerHTML=bids.slice(0,8).map(b=>row(b,'b')).join('');
+  const mid=(bids[0][0]+asks[0][0])/2;$('mid').textContent=fp(mid);$('spr').textContent=(asks[0][0]-bids[0][0]).toFixed(F.dec?2:0);
+  const bs=bids.reduce((s,b)=>s+b[1],0),as=asks.reduce((s,a)=>s+a[1],0);const imb=(bs-as)/(bs+as)*100;S.imb=imb;
+  $('p-imb').innerHTML=`imb <span class="${imb>=0?'up':'dn'}">${imb>=0?'+':''}${imb.toFixed(0)}%</span>`;
+}
+function renderStats(){
+  if(!S.last)return;const now=Date.now();S.times=S.times.filter(t=>now-t<60000);
+  const chg=S.last-S.open,pct=chg/S.open*100,cls=chg>=0?'up':'dn';
+  $('h-last').textContent=fp(S.last);$('h-last').className=S.last>=S.prev?'up':'dn';S.prev=S.last;
+  $('p-last').textContent=fp(S.last);$('p-chg').innerHTML=`<span class="${cls}">${chg>=0?'+':''}${fp(chg)} (${pct.toFixed(3)}%)</span> since this page opened`;
+  $('p-dir').innerHTML=`<span class="${cls}">${chg>=0?'▲ BID':'▼ OFFER'}</span>`;
+  $('h-cvd').textContent=fb(S.cvd);$('h-cvd').className=S.cvd>=0?'up':'dn';$('h-tpm').textContent=f0(S.times.length);
+  const tot=S.bv+S.sv||1,bp=S.bv/tot*100;$('m-buy').style.width=bp.toFixed(1)+'%';$('m-bp').textContent=bp.toFixed(1)+'%';
+  $('k-bv').textContent=S.bv.toFixed(2)+' ₿';$('k-sv').textContent=S.sv.toFixed(2)+' ₿';$('k-avg').textContent=fu(S.notional/S.n);$('k-wh').textContent=S.wh;
+  const r=S.rets;if(r.length>3){const m=r.reduce((a,b)=>a+b,0)/r.length;const sd=Math.sqrt(r.reduce((a,b)=>a+(b-m)**2,0)/(r.length-1));$('k-rv').textContent=(sd*Math.sqrt(365*24*360)*100).toFixed(1)+'% ann.'}
+  $('k-hl').textContent=f0(S.hi)+' / '+f0(S.lo);
+  const B=S.bars;if(B.length>1){const lb=B[B.length-1],pb=B[B.length-2];const d=lb.cvd-pb.cvd;$('f-d').innerHTML=`<span class="${d>=0?'up':'dn'}">${fb(d)}</span>`;
+    const b6=B[Math.max(0,B.length-7)];const d1=lb.cvd-b6.cvd;$('f-d1').innerHTML=`<span class="${d1>=0?'up':'dn'}">${fb(d1)}</span>`;
+    $('f-up').textContent=B.filter(b=>b.c>=b.o).length+' / '+B.length;$('cvd-now').innerHTML=`<span class="${S.cvd>=0?'up':'dn'}">${fb(S.cvd)}</span>`}
+  const ev=[`<em>${S.mode}</em>`,`${F.pair} ${fp(S.last)}`,`CVD ${fb(S.cvd)}`,`TAKER BUY ${bp.toFixed(1)}%`,`${S.times.length} FILLS/MIN`,...S.events];
+  $('ticker').innerHTML=ev.join(' · ')+' · ';
+}
+function clock(){$('clock').textContent=new Date().toLocaleTimeString('ja-JP',{hour12:false,timeZone:'Asia/Tokyo'})+' JST'}
+
+/* ---------- derivatives & cross-venue layer (always on, independent of the main feed) ---------- */
+const D={bnMark:0,bnIndex:0,bnFund:null,bnNext:0,by:{},byOI0:0,bnOI:0,bnOI0:0,dvol:0,dvol0:0,cb:0,cbCvd:0,perpCvd:0,perpLast:0,
+  liqL:0,liqS:0,liqN:0,liqRecent:[],cvdHist:[],oiHist:[],ls:null,taker:null};
+const SRC={};
+function chips(){
+  $('venues').innerHTML=Object.entries(SRC).map(([k,v])=>`<span class="chip ${v}" title="${k}">${k}</span>`).join('');
+}
+function feedWS(name,urls,onopen,onmsg,ping){
+  urls=[].concat(urls);let delay=3000,ui=0;
+  const go=()=>{
+    SRC[name]='wait';chips();let s,pt=null,wd=null,last=Date.now(),got=false;const url=urls[ui%urls.length];
+    const retry=()=>{ui++;setTimeout(go,delay=Math.min(delay*2,60000))};
+    try{s=new WebSocket(url)}catch(e){SRC[name]='off';chips();return retry()}
+    s.onopen=()=>{delay=3000;onopen(s);if(ping)pt=setInterval(()=>{try{ping(s)}catch(e){}},20000);
+      /* open but silent for 20s = wrong route; drop and try the next URL */
+      wd=setInterval(()=>{if(Date.now()-last>20000){try{s.close()}catch(e){}}},5000)};
+    s.onmessage=e=>{last=Date.now();if(!got){got=true;SRC[name]='on';chips()}try{onmsg(s,e.data)}catch(err){}};
+    s.onerror=()=>{};
+    s.onclose=()=>{clearInterval(pt);clearInterval(wd);SRC[name]='off';chips();if(got)ui--;retry()};
+  };go();
+}
+function addLiq(venue,longLiq,usd,px,t){
+  if(!(usd>0))return;
+  if(longLiq)D.liqL+=usd;else D.liqS+=usd;D.liqN++;if(!D.liqMax||usd>D.liqMax.usd)D.liqMax={usd,venue,longLiq};
+  D.liqRecent.push({t:Date.now(),longLiq,usd});
+  Torus.spawn(!longLiq,usd,longLiq?'liqL':'liqS');
+  if(usd>=100000){S.events.unshift(`<b>LIQ ${longLiq?'LONG':'SHORT'} ${venue} ${'$'+(usd/1e3).toFixed(0)+'k'}</b>`);S.events=S.events.slice(0,8)}
+  const tp=$('liqtape');if(tp.firstElementChild&&tp.firstElementChild.classList.contains('note'))tp.innerHTML='';
+  const d=document.createElement('div');d.className='lq '+(longLiq?'l':'s');
+  const tm=new Date(t||Date.now()).toLocaleTimeString('ja-JP',{hour12:false,timeZone:'Asia/Tokyo'});
+  const ua=usd>=1e6?'$'+(usd/1e6).toFixed(2)+'M':'$'+(usd/1e3).toFixed(1)+'k';
+  d.innerHTML=`<b>${ua}</b><span>${longLiq?'ロング清算':'ショート清算'}</span><span class="meta">${venue} · ${px?f1(px):''} · ${tm}</span>`;
+  tp.prepend(d);while(tp.children.length>12)tp.lastChild.remove();
+}
+/* Binance USDⓈ-M perp: taker flow, mark/index/funding, liquidations */
+feedWS('Binance Perp',['wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@forceOrder','wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@forceOrder','wss://fstream.binance.com/market/stream?streams=btcusdt@aggTrade/btcusdt@markPrice/btcusdt@forceOrder'],()=>{},(s,raw)=>{
+  const m=JSON.parse(raw),d=m.data;if(!d)return;
+  if(d.e==='aggTrade'){const q=+d.q;D.perpCvd+=d.m?-q:q;D.perpLast=+d.p}
+  else if(d.e==='markPriceUpdate'){D.bnMark=+d.p;D.bnIndex=+d.i;D.bnFund=+d.r;D.bnNext=+d.T}
+  else if(d.e==='forceOrder'){const o=d.o;const q=+(o.z||o.q),px=+(o.ap||o.p);addLiq('Binance',o.S==='SELL',q*px,px,o.T)}
+});
+/* Bybit linear: OI, funding, liquidations */
+feedWS('Bybit','wss://stream.bybit.com/v5/public/linear',s=>s.send(JSON.stringify({op:'subscribe',args:['tickers.BTCUSDT','allLiquidation.BTCUSDT']})),(s,raw)=>{
+  const m=JSON.parse(raw);if(!m.topic)return;
+  if(m.topic==='tickers.BTCUSDT'){Object.assign(D.by,m.data);const oi=+D.by.openInterest;if(oi&&!D.byOI0)D.byOI0=oi}
+  else if(m.topic.startsWith('allLiquidation'))(m.data||[]).forEach(l=>addLiq('Bybit',l.S==='Buy',(+l.v)*(+l.p),+l.p,+l.T));
+},s=>s.send(JSON.stringify({op:'ping'})));
+/* OKX swaps: liquidations (BTC-USDT-SWAP 0.01 BTC/contract, BTC-USD-SWAP $100/contract) */
+feedWS('OKX','wss://ws.okx.com:8443/ws/v5/public',s=>s.send(JSON.stringify({op:'subscribe',args:[{channel:'liquidation-orders',instType:'SWAP'}]})),(s,raw)=>{
+  if(raw==='pong')return;const m=JSON.parse(raw);if(!m.data)return;
+  m.data.forEach(it=>{if(it.instId!=='BTC-USDT-SWAP'&&it.instId!=='BTC-USD-SWAP')return;
+    (it.details||[]).forEach(x=>{const px=+x.bkPx,sz=+x.sz;const usd=it.instId==='BTC-USD-SWAP'?sz*100:sz*0.01*px;
+      const longLiq=x.posSide==='long'||(x.posSide!=='short'&&x.side==='sell');addLiq('OKX',longLiq,usd,px,+x.ts)})});
+},s=>s.send('ping'));
+/* Coinbase spot: premium + US taker flow. "side" is the maker side, so taker buy = side "sell". */
+feedWS('Coinbase','wss://ws-feed.exchange.coinbase.com',s=>s.send(JSON.stringify({type:'subscribe',product_ids:['BTC-USD'],channels:['matches']})),(s,raw)=>{
+  const m=JSON.parse(raw);if(m.type!=='match')return;D.cb=+m.price;const q=+m.size;D.cbCvd+=m.side==='sell'?q:-q;
+});
+/* Deribit: DVOL */
+feedWS('Deribit','wss://www.deribit.com/ws/api/v2',s=>s.send(JSON.stringify({jsonrpc:'2.0',id:1,method:'public/subscribe',params:{channels:['deribit_volatility_index.btc_usd']}})),(s,raw)=>{
+  const m=JSON.parse(raw);const d=m.params&&m.params.data;if(d&&d.volatility){D.dvol=+d.volatility;if(!D.dvol0)D.dvol0=D.dvol}
+},s=>s.send(JSON.stringify({jsonrpc:'2.0',id:9,method:'public/test',params:{}})));
+/* Binance REST: OI, long/short account ratio, taker buy/sell ratio */
+async function poll(){
+  const j=async u=>{const r=await fetch(u);if(!r.ok)throw 0;return r.json()};
+  try{const o=await j('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT');D.bnOI=+o.openInterest;if(!D.bnOI0)D.bnOI0=D.bnOI;SRC['Binance OI']='on'}catch(e){SRC['Binance OI']='off'}
+  try{const a=await j('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=5m&limit=1');D.ls=a[0];
+      const b=await j('https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=BTCUSDT&period=5m&limit=1');D.taker=b[0];SRC['L/S']='on'}catch(e){SRC['L/S']='off'}
+  chips();
+}
+poll();setInterval(poll,20000);
+/* sample history every bar */
+setInterval(()=>{
+  D.cvdHist.push({spot:S.cvd,perp:D.perpCvd,cb:D.cbCvd});if(D.cvdHist.length>90)D.cvdHist.shift();
+  const by=+D.by.openInterest||0;if(by||D.bnOI){D.oiHist.push({by,bn:D.bnOI});if(D.oiHist.length>180)D.oiHist.shift()}
+},BAR_MS);
+
+const pctS=v=>(v>=0?'+':'')+v.toFixed(4)+'%';
+const cd=t=>{const s=Math.max(0,Math.floor((t-Date.now())/1000));return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor(s%3600/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const usdS=v=>{const a=Math.abs(v);return (v<0?'-':'')+(a>=1e9?'$'+(a/1e9).toFixed(2)+'B':a>=1e6?'$'+(a/1e6).toFixed(1)+'M':'$'+(a/1e3).toFixed(1)+'k')};
+function tile(id,val,cls,sub){const e=$(id);e.textContent=val;e.className=cls||'';$(id+'2').textContent=sub}
+function renderDerivs(){
+  if(D.bnFund!=null)tile('d-fbn',pctS(D.bnFund*100),D.bnFund>=0?'up':'dn',`年率 ${(D.bnFund*3*365*100).toFixed(1)}% · 次 ${cd(D.bnNext)}`);
+  const bf=+D.by.fundingRate;if(D.by.fundingRate!=null)tile('d-fby',pctS(bf*100),bf>=0?'up':'dn',`年率 ${(bf*3*365*100).toFixed(1)}% · 次 ${cd(+D.by.nextFundingTime)}`);
+  const bm=D.bnMark||+D.by.markPrice,bx=D.bnIndex||+D.by.indexPrice,bsrc=D.bnMark?'Binance':'Bybit';
+  if(bm&&bx){const b=(bm-bx)/bx*1e4;tile('d-basis',(b>=0?'+':'')+b.toFixed(2)+' bps',b>=0?'up':'dn',`${bsrc} mark ${f1(bm)} / index ${f1(bx)}`)}
+  const oi=+D.by.openInterest;if(oi){const dd=oi-D.byOI0;tile('d-oiby',f0(oi)+' ₿',dd>=0?'up':'dn',`${usdS(+D.by.openInterestValue||oi*D.bnIndex)} · 開いてから ${dd>=0?'+':''}${dd.toFixed(1)} ₿`)}
+  if(D.bnOI){const dd=D.bnOI-D.bnOI0;tile('d-oibn',f0(D.bnOI)+' ₿',dd>=0?'up':'dn',`${usdS(D.bnOI*(D.bnIndex||S.last))} · 開いてから ${dd>=0?'+':''}${dd.toFixed(1)} ₿`)}
+  if(D.dvol){const dd=D.dvol-D.dvol0;tile('d-dvol',D.dvol.toFixed(2),'',`開いてから ${dd>=0?'+':''}${dd.toFixed(2)}`)}
+  if(D.cb&&bx){const p=D.cb-bx,b=p/bx*1e4;tile('d-cbp',(p>=0?'+$':'-$')+Math.abs(p).toFixed(1),p>=0?'up':'dn',`${b>=0?'+':''}${b.toFixed(1)} bps · vs ${bsrc} index`)}
+  if(D.ls){const r=+D.ls.longShortRatio;tile('d-ls',r.toFixed(2),r>=1?'up':'dn',`ロング ${(D.ls.longAccount*100).toFixed(1)}% · テイカー買/売 ${D.taker?(+D.taker.buySellRatio).toFixed(2):'—'}`)}
+  const tot=D.liqL+D.liqS;$('lq-bar').style.width=(tot?D.liqL/tot*100:50).toFixed(1)+'%';
+  $('lq-l').textContent=usdS(D.liqL);$('lq-s').textContent=usdS(D.liqS);$('lq-n').textContent=D.liqN+'件';
+  const now=Date.now();D.liqRecent=D.liqRecent.filter(x=>now-x.t<300000);
+  const l5=D.liqRecent.filter(x=>x.longLiq).reduce((a,x)=>a+x.usd,0),s5=D.liqRecent.filter(x=>!x.longLiq).reduce((a,x)=>a+x.usd,0);
+  $('lq-5').innerHTML=`直近5分 <span class="liqL">L ${usdS(l5)}</span> / <span class="liqS">S ${usdS(s5)}</span>`;
+}
+function drawCvd3(){
+  const [x,w,h]=fit($('cv-cvd3'));x.clearRect(0,0,w,h);const H=D.cvdHist;if(H.length<2){x.fillStyle=C.dim;x.font='10px "IBM Plex Mono",monospace';x.textAlign='center';x.fillText('10秒ごとに記録中…',w/2,h/2);x.textAlign='left';return}
+  const keys=[['spot',C.acc],['perp',C.perp],['cb',C.cb]];
+  /* each series rebased to 0 at the left edge so slopes compare */
+  const base={spot:H[0].spot,perp:H[0].perp,cb:H[0].cb};let hi=0,lo=0;
+  H.forEach(r=>keys.forEach(([k])=>{const v=r[k]-base[k];hi=Math.max(hi,v);lo=Math.min(lo,v)}));const pd=(hi-lo)*.1||1;hi+=pd;lo-=pd;
+  const X=i=>i/(H.length-1)*(w-46),Y=v=>(hi-v)/(hi-lo)*h;
+  x.strokeStyle=C.line;x.beginPath();x.moveTo(0,Y(0));x.lineTo(w-46,Y(0));x.stroke();
+  keys.forEach(([k,c])=>{x.strokeStyle=c;x.lineWidth=1.6;x.beginPath();H.forEach((r,i)=>{const y=Y(r[k]-base[k]);i?x.lineTo(X(i),y):x.moveTo(X(i),y)});x.stroke();
+    const lv=H[H.length-1][k]-base[k];x.fillStyle=c;x.beginPath();x.arc(X(H.length-1),Y(lv),2.5,0,7);x.fill()});
+  x.lineWidth=1;x.font='9px "IBM Plex Mono",monospace';x.fillStyle=C.dim;x.fillText(fb(hi-pd),w-44,10);x.fillText(fb(lo+pd),w-44,h-3);
+}
+function drawOI(){
+  const [x,w,h]=fit($('cv-oi'));x.clearRect(0,0,w,h);const H=D.oiHist;if(H.length<2){x.fillStyle=C.dim;x.font='10px "IBM Plex Mono",monospace';x.textAlign='center';x.fillText('10秒ごとに記録中…',w/2,h/2);x.textAlign='left';return}
+  [['by',C.perp],['bn',C.acc]].forEach(([k,c])=>{const vs=H.map(r=>r[k]).filter(v=>v>0);if(vs.length<2)return;
+    let hi=Math.max(...vs),lo=Math.min(...vs);const pd=(hi-lo)*.15||1;hi+=pd;lo-=pd;
+    const X=i=>i/(H.length-1)*w,Y=v=>(hi-v)/(hi-lo)*(h-12)+6;
+    const g=x.createLinearGradient(0,0,0,h);g.addColorStop(0,c+'40');g.addColorStop(1,c+'00');
+    x.beginPath();let first=-1;H.forEach((r,i)=>{if(!(r[k]>0))return;if(first<0){first=i;x.moveTo(X(i),Y(r[k]))}else x.lineTo(X(i),Y(r[k]))});
+    x.strokeStyle=c;x.lineWidth=1.6;x.stroke();x.lineTo(w,h);x.lineTo(X(first),h);x.closePath();x.fillStyle=g;x.fill()});
+  x.lineWidth=1;x.font='9px "IBM Plex Mono",monospace';x.fillStyle=C.dim;x.fillText('各ラインは自身のレンジで正規化',2,h-2);
+}
+setInterval(()=>{renderDerivs();drawCvd3();drawOI()},500);
+/* ---------- クロちゃん用スナップショット ---------- */
+const T0=Date.now();
+function snapText(){
+  const now=new Date(),mins=Math.round((Date.now()-T0)/60000);
+  const ts=now.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+  const sg=v=>(v>=0?'+':'')+v;const n2=v=>sg(v.toFixed(2));const L=[];
+  const B=S.bars;const back=k=>B.length>k?B[B.length-1-k]:B[0];
+  L.push(`【BTC Flow Core スナップショット】${ts} JST（ページ表示 ${mins}分）`);
+  L.push(`※CVD・清算・OI増減は表示開始からの累計。メインフィード: ${F.name} ${F.pair}（${S.mode==='LIVE'?'LIVE':'SIM＝実データではない'}）`);
+  if(S.last){
+    const ch=S.last-S.open,pc=ch/S.open*100;
+    const c5=B.length>1?S.last-back(30).o:0;
+    L.push(`■価格 ${fp(S.last)}（開始比 ${sg(fp(ch))} / ${n2(pc)}%）高安 ${fp(S.hi)} / ${fp(S.lo)}・直近5分 ${sg(fp(c5))}`);
+    const tot=S.bv+S.sv||1;
+    L.push(`■現物フロー CVD ${fb(S.cvd)}・テイカー買い ${(S.bv/tot*100).toFixed(1)}%・約定 ${S.times.length}件/分・大口(≥${fu(F.whale)}) ${S.lf||0}件・クジラ(≥${fu(F.big)}) ${S.wh}件・実現ボラ ${$('k-rv').textContent}・板インバランス ${S.imb!=null?sg(S.imb.toFixed(0))+'%':'—'}`);
+  }
+  const H=D.cvdHist;
+  if(H.length>1){
+    const a=H[0],z=H[H.length-1],m=H[Math.max(0,H.length-31)];
+    L.push(`■CVD比較（直近${Math.round((H.length-1)*BAR_MS/60000)}分）現物 ${fb(z.spot-a.spot)}・Binance先物 ${fb(z.perp-a.perp)}・Coinbase ${fb(z.cb-a.cb)}`);
+    L.push(`　直近5分 現物 ${fb(z.spot-m.spot)}・Binance先物 ${fb(z.perp-m.perp)}・Coinbase ${fb(z.cb-m.cb)}`);
+  }
+  const fr=(r,t)=>`${sg((r*100).toFixed(4))}%（年率${(r*3*365*100).toFixed(1)}%・次まで${cd(t)}）`;
+  L.push(`■資金調達率 Binance ${D.bnFund!=null?fr(D.bnFund,D.bnNext):'—'} / Bybit ${D.by.fundingRate!=null?fr(+D.by.fundingRate,+D.by.nextFundingTime):'—'}`);
+  const bm=D.bnMark||+D.by.markPrice,bx=D.bnIndex||+D.by.indexPrice;
+  if(bm&&bx)L.push(`■ベーシス ${n2((bm-bx)/bx*1e4)}bps（${D.bnMark?'Binance':'Bybit'} mark ${f1(bm)} / index ${f1(bx)}）`);
+  const O=D.oiHist,o5=O[Math.max(0,O.length-31)],oz=O[O.length-1];
+  const byOI=+D.by.openInterest;
+  if(byOI)L.push(`■建玉 Bybit ${f0(byOI)}₿（${usdS(+D.by.openInterestValue||byOI*bx)}・開始比 ${sg((byOI-D.byOI0).toFixed(1))}₿${o5&&o5.by?'・直近5分 '+sg((oz.by-o5.by).toFixed(1))+'₿':''}）`);
+  if(D.bnOI)L.push(`　Binance ${f0(D.bnOI)}₿（開始比 ${sg((D.bnOI-D.bnOI0).toFixed(1))}₿${o5&&o5.bn?'・直近5分 '+sg((oz.bn-o5.bn).toFixed(1))+'₿':''}）`);
+  if(D.cb&&bx)L.push(`■Coinbaseプレミアム ${sg((D.cb-bx).toFixed(1))}ドル（${n2((D.cb-bx)/bx*1e4)}bps）`);
+  if(D.dvol)L.push(`■DVOL ${D.dvol.toFixed(2)}（開始比 ${n2(D.dvol-D.dvol0)}）`);
+  if(D.ls)L.push(`■L/S口座比 ${(+D.ls.longShortRatio).toFixed(2)}（ロング${(D.ls.longAccount*100).toFixed(1)}%）・テイカー買/売 ${D.taker?(+D.taker.buySellRatio).toFixed(2):'—'}（Binance 5分）`);
+  const r5=D.liqRecent.filter(x=>Date.now()-x.t<300000);
+  const l5=r5.filter(x=>x.longLiq).reduce((a,x)=>a+x.usd,0),s5=r5.filter(x=>!x.longLiq).reduce((a,x)=>a+x.usd,0);
+  L.push(`■清算（開始から）ロング ${usdS(D.liqL)}・ショート ${usdS(D.liqS)}（${D.liqN}件）直近5分 L ${usdS(l5)} / S ${usdS(s5)}${D.liqMax?`・最大 ${D.liqMax.venue} ${D.liqMax.longLiq?'ロング':'ショート'} ${usdS(D.liqMax.usd)}`:''}`);
+  L.push(`■接続 ${Object.entries(SRC).map(([k,v])=>k+(v==='on'?'✓':'×')).join(' ')}`);
+  return L.join('\n');
+}
+$('snapbtn').addEventListener('click',()=>{
+  const t=snapText(),btn=$('snapbtn'),box=$('snapbox');
+  const done=ok=>{btn.textContent=ok?'✓ コピーしました':'下の枠を長押しでコピー';setTimeout(()=>{btn.textContent='📋 クロちゃん用コピー'},2500)};
+  box.value=t;
+  try{navigator.clipboard.writeText(t).then(()=>{box.hidden=true;done(true)},()=>{box.hidden=false;box.focus();box.select();done(false)})}
+  catch(e){box.hidden=false;box.focus();box.select();done(false)}
+});
+
+
+
+/* ---------- loops ---------- */
+function frame(){Torus.draw();requestAnimationFrame(frame)}
+setInterval(()=>{drawPrice();drawCVD();drawVol();drawSize();renderBook();renderStats();clock()},400);
+let init='edgex';try{init=localStorage.getItem('flowcore-feed')||init}catch(e){}
+const hs=location.hash.slice(1);if(FEEDS[hs])init=hs;
+if(/github\.io$/.test(location.hostname))$('golive').hidden=true;
+selectFeed(init);requestAnimationFrame(frame);
+})();
+</script>
