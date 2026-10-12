@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>三核合議システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+1+Code:wght@400;500;700&display=swap">
+<style>
+/* Layout: command header → council (BTC hex triad) + status + system check → alt scanner → history / hit-rate / whales. Single dark "ember & bone" look by choice. */
+:root{
+  --bg:#0b0908; --panel:#140f0b; --panel2:#1c1610; --line:#3a2b1e; --fg:#efe6d8; --dim:#8f7d6a;
+  --ember:#ff6a1a; --up:#3ddc97; --down:#ff3b4e; --gold:#ffc247; --ice:#7fd6ff;
+  --f-disp:"Dela Gothic One","Hiragino Sans","Noto Sans JP",sans-serif;
+  --f-data:"M PLUS 1 Code",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-data);font-size:12px;padding-inline:12px;padding-block:10px 24px;font-variant-numeric:tabular-nums;
+  background-image:radial-gradient(ellipse at 50% -10%,rgba(255,106,26,.13),transparent 60%),repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0 1px,transparent 1px 3px)}
+@media (min-width:500px){body{padding-inline:16px}}
+.wrap{max-width:1400px;margin:0 auto;display:grid;gap:10px}
+.panel{border:1px solid var(--line);background:var(--panel);padding:10px 12px;min-width:0;position:relative}
+.panel::before{content:"";position:absolute;top:-1px;left:-1px;width:14px;height:14px;border-top:2px solid var(--ember);border-left:2px solid var(--ember)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.ph b{font-family:var(--f-disp);font-weight:400;font-size:14px;letter-spacing:.06em}
+.ph span{font-size:10px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.note{font-size:10px;color:var(--dim);line-height:1.6}
+.up{color:var(--up)} .dn{color:var(--down)} .gold{color:var(--gold)} .ice{color:var(--ice)} .dim{color:var(--dim)}
+
+/* header */
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;border:1px solid var(--line);background:linear-gradient(90deg,rgba(255,106,26,.12),transparent 40%),var(--panel);padding:10px 12px}
+.brand h1{margin:0;font-family:var(--f-disp);font-weight:400;font-size:24px;letter-spacing:.08em;line-height:1.1;text-wrap:balance}
+.brand small{display:block;font-size:10px;letter-spacing:.2em;color:var(--ember)}
+.hright{margin-left:auto;display:flex;align-items:center;gap:12px}
+.clock{font-family:var(--f-disp);font-size:18px}
+.pill{font-size:10px;letter-spacing:.12em;padding:2px 8px;border:1px solid currentColor}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:700 12px var(--f-data);letter-spacing:.04em;padding:7px 12px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--ember)}
+.btn.hot{background:var(--ember);border-color:var(--ember);color:var(--bg)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.btn:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.ctrl label{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim);letter-spacing:.08em}
+select{font:500 12px var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:5px 6px}
+#snapbox{width:100%;font:11px/1.5 var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--gold);padding:8px;margin-top:8px}
+
+.row{display:grid;gap:10px;grid-template-columns:1fr}
+@media (min-width:900px){
+  .r1{grid-template-columns:1.15fr 1fr}
+  .r3{grid-template-columns:1fr 1fr 1fr}
+}
+/* council */
+.council{display:grid;gap:8px}
+#hex{width:100%;max-width:460px;margin:0 auto;display:block}
+#hex text{font-family:var(--f-data)}
+.cores{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.core{border:1px solid var(--line);padding:6px 8px;background:var(--panel2);min-width:0}
+.core b{font-family:var(--f-disp);font-weight:400;font-size:15px}
+.core span{display:block;font-size:9px;color:var(--dim);letter-spacing:.06em}
+.core em{font-style:normal;font-size:10px;color:var(--fg);overflow-wrap:anywhere}
+
+/* status */
+.status{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14px;align-items:baseline}
+.status dt{color:var(--ember);font-size:12px}
+.status dd{margin:0;font-weight:700;overflow-wrap:anywhere}
+.tier{display:inline-block;font-size:11px;padding:1px 8px;border:1px solid currentColor;letter-spacing:.08em}
+.t0{color:var(--dim)} .t1{color:var(--ice)} .t2{color:var(--gold)} .t3{color:var(--down)}
+.t3.blink{animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{background:rgba(255,59,78,.25)}}
+.syscheck{margin-top:12px;display:grid;gap:3px;font-size:11px}
+.syscheck div{display:flex;gap:6px;white-space:nowrap;overflow:hidden}
+.syscheck div::before{content:">";color:var(--ember)}
+.syscheck i{flex:1;font-style:normal;color:var(--line);overflow:hidden}
+.syscheck i::after{content:"································································"}
+.sync{margin-top:10px;font-size:11px;color:var(--gold);display:flex;justify-content:space-between}
+.syncbar{height:8px;border:1px solid var(--line);margin-top:3px}
+.syncbar i{display:block;height:100%;background:linear-gradient(90deg,var(--up),var(--gold));transition:width .5s}
+
+/* scanner */
+.tabs{display:flex;gap:6px}
+.tabs button{font:500 11px var(--f-data);padding:4px 10px;background:transparent;color:var(--dim);border:1px solid var(--line);cursor:pointer}
+.tabs button[aria-pressed="true"]{color:var(--bg);background:var(--ember);border-color:var(--ember)}
+.tabs button:focus-visible{outline:2px solid var(--gold)}
+.scan{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:11px}
+th{font-weight:500;font-size:9px;letter-spacing:.1em;color:var(--dim);text-align:right;padding:4px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{padding:5px 6px;border-bottom:1px solid rgba(58,43,30,.5);text-align:right;white-space:nowrap}
+tr.hot td{background:rgba(255,59,78,.07)}
+tr.warm td{background:rgba(255,194,71,.05)}
+.sym{font-weight:700}
+.bars{display:inline-flex;gap:2px;vertical-align:middle}
+.bars i{width:16px;height:8px;background:var(--line);position:relative;display:inline-block}
+.bars i b{position:absolute;inset:0 auto 0 0;background:var(--ember)}
+.score{font-family:var(--f-disp);font-size:14px}
+
+/* lists */
+.list{display:grid;gap:4px;max-height:360px;overflow-y:auto}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;padding:5px 6px;border-bottom:1px solid rgba(58,43,30,.6);font-size:11px;align-items:baseline}
+.item .t{color:var(--dim)}
+.item .m{font-size:10px;color:var(--dim);grid-column:2/4}
+.chip{font-size:10px;padding:0 6px;border:1px solid currentColor}
+.res{font-size:10px}
+.stat td,.stat th{text-align:center}
+.stat td:first-child,.stat th:first-child{text-align:left}
+.big{font-family:var(--f-disp);font-size:18px}
+a{color:var(--ice)}
+@media (prefers-reduced-motion:reduce){.t3.blink{animation:none}.syncbar i{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><h1>三核合議システム</h1><small>急騰・急落 検知 / TRI-CORE CONSENSUS</small></div>
+    <div class="hright"><span id="mode" class="pill gold">接続中</span><span class="clock" id="clock">--:--:--</span></div>
+  </header>
+
+  <div class="panel">
+    <div class="ctrl">
+      <button type="button" class="btn" id="sound" aria-pressed="false">🔇 音声 OFF</button>
+      <button type="button" class="btn gold" id="snapbtn">📋 クロちゃん用コピー</button>
+      <a class="btn hot" id="golive" href="https://machaki69.github.io/ibirujo-v2/sankaku.html" target="_blank" rel="noopener">● ライブ版を開く ↗</a>
+      <label for="minqv">対象（24h出来高）<select id="minqv"><option value="1000000">$1M以上</option><option value="5000000" selected>$5M以上</option><option value="20000000">$20M以上</option><option value="100000000">$100M以上</option></select></label>
+      <label for="whalemin">大口送金<select id="whalemin"><option value="50">50 BTC以上</option><option value="100" selected>100 BTC以上</option><option value="500">500 BTC以上</option><option value="1000">1000 BTC以上</option></select></label>
+    </div>
+    <textarea id="snapbox" rows="10" readonly hidden aria-label="スナップショット"></textarea>
+    <p class="note" id="modenote" style="margin:8px 0 0"></p>
+  </div>
+
+  <section class="row r1">
+    <div class="panel council">
+      <div class="ph"><b>三核合議 · BTC</b><span id="btcpx">—</span></div>
+      <svg id="hex" viewBox="0 0 400 345" role="img" aria-label="三つの判定コアと総合危険度"></svg>
+      <div class="cores">
+        <div class="core"><b>迅</b><span>JIN · 値動きの速さ</span><em id="cj">—</em></div>
+        <div class="core"><b>轟</b><span>GOU · 出来高・約定の偏り</span><em id="cg">—</em></div>
+        <div class="core"><b>崩</b><span>HOU · 清算・建玉・資金調達</span><em id="ch">—</em></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>STATUS</b><span>最も危険な対象</span></div>
+      <dl class="status">
+        <dt>発生源</dt><dd id="st-src">—</dd>
+        <dt>危険度</dt><dd id="st-score">—</dd>
+        <dt>判定</dt><dd id="st-tier">—</dd>
+        <dt>方向</dt><dd id="st-dir">—</dd>
+        <dt>対処</dt><dd id="st-act" style="font-size:12px;font-weight:500">—</dd>
+      </dl>
+      <div class="syscheck" id="sys"></div>
+      <div class="sync"><span>シンクロ率 SYNC</span><span id="syncv">0%</span></div>
+      <div class="syncbar"><i id="syncb" style="width:0%"></i></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="ph"><b>全銘柄スキャン · Binance先物</b><span id="scaninfo">—</span></div>
+    <div class="tabs" role="group" aria-label="絞り込み" style="margin-bottom:8px">
+      <button type="button" data-f="all" aria-pressed="true">全部</button>
+      <button type="button" data-f="up" aria-pressed="false">急騰</button>
+      <button type="button" data-f="dn" aria-pressed="false">急落</button>
+    </div>
+    <div class="scan"><table><thead><tr><th>銘柄</th><th>1分</th><th>5分</th><th>迅 轟 崩</th><th>合議</th><th>危険度</th><th>判定</th></tr></thead><tbody id="scanbody"><tr><td colspan="7" class="dim">データ受信待ち…</td></tr></tbody></table></div>
+    <p class="note">危険度 = 迅40% + 轟30% + 崩30% ＋ 合議ボーナス（2核一致 +10 / 3核一致 +20）。2核以上が60を超え、危険度60以上で警報。同じ銘柄は30分に1回まで。</p>
+  </section>
+
+  <section class="row r3">
+    <div class="panel">
+      <div class="ph"><b>警報の履歴 · 72h</b><span id="histn">0件</span></div>
+      <div class="list" id="hist"><p class="note">警報が出るとここに残ります。ページを閉じても、このブラウザに72時間保存されます。</p></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>的中率</b><span>警報後60分以内</span></div>
+      <div class="scan"><table class="stat"><thead><tr><th>区分</th><th>急騰</th><th>急落</th><th>全体</th></tr></thead><tbody id="stat"></tbody></table></div>
+      <p class="note">的中 = 警報の方向に、アルトは5%、BTCは1.5%以上動いたもの。ページを閉じて追跡できなかった警報は集計から外します。保存期間7日。</p>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>大口送金の見張り · BTC</b><span id="whn">0件</span></div>
+      <div class="list" id="whales"><p class="note">未承認トランザクションから、大口の送金を拾います。</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const clamp=v=>Math.max(0,Math.min(100,v));
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const f2=(v,d=2)=>(v>=0?'+':'')+v.toFixed(d);
+const fpx=v=>v>=1000?v.toLocaleString('en-US',{maximumFractionDigits:1}):v>=1?v.toFixed(3):v.toPrecision(4);
+const usd=v=>v>=1e9?'$'+(v/1e9).toFixed(2)+'B':v>=1e6?'$'+(v/1e6).toFixed(1)+'M':'$'+(v/1e3).toFixed(0)+'k';
+const jst=(t,withDate)=>new Date(t).toLocaleString('ja-JP',withDate?{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}:{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+const TIERS=[{k:'平常',e:'NORMAL',c:'t0'},{k:'監視',e:'WATCH',c:'t1'},{k:'警戒',e:'WARNING',c:'t2'},{k:'非常',e:'EMERGENCY',c:'t3'}];
+const tier=s=>TIERS[s>=80?3:s>=60?2:s>=40?1:0];
+const T0=Date.now();
+const CFG=Object.assign({minQv:5e6,whaleMin:100},LS.get('sk-cfg',{}));
+const ALERT_MIN=60,COOL=30*60e3,WIN=60*60e3,ALT_HIT=5,BTC_HIT=1.5;
+let MODE='WAIT',FILTER='all',SOUND=false;
+
+/* ---------- state ---------- */
+const R={};
+const rec=s=>R[s]||(R[s]={s,c:0,o:0,h:0,l:0,qv:0,hist:[],liq:[],fr:null,oi:[],oiChg:null,sc:null});
+const B={trades:[],mins:[],curMin:0,curD:0,oi:[],liq:[],sc:null};
+const SRC={tick:0,liq:0,fr:0,btc:0,bybit:0,oirest:0,chain:0};
+const SEEN={};
+const at=(h,t)=>{let r=h[0];for(let i=0;i<h.length;i++){if(h[i].t<=t)r=h[i];else break}return r};
+
+function ingestMini(arr,t){
+  for(const x of arr){const s=x.s;if(!s||!s.endsWith('USDT'))continue;const r=rec(s);
+    r.c=+x.c;r.o=+x.o;r.h=+x.h;r.l=+x.l;r.qv=+x.q;
+    const H=r.hist,L=H[H.length-1];if(!L||t-L.t>=5000){H.push({t,c:r.c,qv:r.qv});while(H.length&&t-H[0].t>1860e3)H.shift()}}
+}
+function ingestLiq(s,longLiq,usdv,t){
+  rec(s).liq.push({t,usd:usdv,long:longLiq});
+  if(s==='BTCUSDT')B.liq.push({t,usd:usdv,long:longLiq});
+}
+function onBtcTrade(q,isBuy,t){
+  B.trades.push({t,q:isBuy?q:-q});
+  const m=Math.floor(t/60e3);
+  if(m!==B.curMin){if(B.curMin){B.mins.push(Math.abs(B.curD));if(B.mins.length>30)B.mins.shift()}B.curMin=m;B.curD=0}
+  B.curD+=isBuy?q:-q;
+}
+
+/* ---------- engines ---------- */
+function scoreRec(r,t){
+  const H=r.hist;if(H.length<2||!r.c)return null;
+  const p1=at(H,t-60e3),p5=at(H,t-300e3);
+  const r1=r.c/p1.c-1,r5=r.c/p5.c-1;
+  const sd=Math.max(2e-4,Math.log(r.h/r.l||1.0001)*0.6/Math.sqrt(1440));
+  const z=Math.max(Math.abs(r1)/sd,Math.abs(r5)/(sd*Math.sqrt(5)));
+  const jin=clamp((z-1.5)*20);
+  const base=r.qv/1440,d1=Math.max(0,r.qv-p1.qv),ratio=base>0?d1/base:0;
+  const gou=clamp((ratio-1.5)*20);
+  r.liq=r.liq.filter(l=>t-l.t<300e3);const lq=r.liq.reduce((a,l)=>a+l.usd,0);
+  let hou=base>0?clamp(lq/(base*5)*400):0;
+  if(r.fr!=null&&Math.abs(r.fr)>=0.001)hou=clamp(hou+30);
+  if(r.oiChg!=null)hou=clamp(hou+Math.abs(r.oiChg)*20);
+  return combine(jin,gou,hou,Math.sign(r5)||Math.sign(r1),{r1:r1*100,r5:r5*100,ratio,lq});
+}
+function combine(jin,gou,hou,dir,extra){
+  const cons=[jin,gou,hou].filter(v=>v>=60).length;
+  const score=Math.round(clamp(.4*jin+.3*gou+.3*hou+(cons===3?20:cons===2?10:0)));
+  return Object.assign({jin,gou,hou,cons,score,dir},extra);
+}
+function scoreBTC(t){
+  const r=R.BTCUSDT;if(!r||!r.sc)return null;
+  B.trades=B.trades.filter(x=>t-x.t<60e3);const d1=B.trades.reduce((a,x)=>a+x.q,0);
+  const avg=B.mins.length>=3?B.mins.reduce((a,b)=>a+b,0)/B.mins.length:0;
+  const gou=avg>0?clamp((Math.abs(d1)/avg-1.5)*25):r.sc.gou;
+  B.liq=B.liq.filter(x=>t-x.t<300e3);const lq=B.liq.reduce((a,x)=>a+x.usd,0);
+  while(B.oi.length&&t-B.oi[0].t>420e3)B.oi.shift();
+  const oi5=B.oi.length>1?(B.oi[B.oi.length-1].v/at(B.oi,t-300e3).v-1)*100:null;
+  const fr=r.fr;
+  const hou=clamp(lq/1e6*25+(oi5!=null?Math.abs(oi5)*100:0)+(fr!=null&&Math.abs(fr)>=0.0005?20:0));
+  return combine(r.sc.jin,gou,hou,Math.sign(r.sc.r5)||Math.sign(d1),{r1:r.sc.r1,r5:r.sc.r5,d1,avg,lq,oi5,fr,ratio:r.sc.ratio});
+}
+
+/* ---------- alerts, tracking, persistence ---------- */
+let ALERTS=LS.get('sk-alerts',[]);
+let WHALES=LS.get('sk-whales',[]);
+const lastAlert={};
+(function initAlerts(){const t=Date.now();ALERTS=ALERTS.filter(a=>t-a.t<7*864e5);
+  ALERTS.forEach(a=>{if(!a.res&&t-a.t>WIN){a.res=true;a.lost=true}lastAlert[a.sym]=Math.max(lastAlert[a.sym]||0,a.t)});
+  WHALES=WHALES.filter(w=>t-w.t<72*36e5)})();
+function save(){if(MODE!=='LIVE')return;const t=Date.now();LS.set('sk-alerts',ALERTS.filter(a=>!a.demo&&t-a.t<7*864e5));LS.set('sk-whales',WHALES.filter(w=>!w.demo&&t-w.t<72*36e5).slice(0,60))}
+function maybeAlert(sym,sc,price,isBtc,t){
+  if(!sc||sc.score<ALERT_MIN||sc.cons<2||!sc.dir)return;
+  if(t-(lastAlert[sym]||0)<COOL)return;
+  if(t-T0<90e3&&MODE==='LIVE')return; /* warm-up guard */
+  lastAlert[sym]=t;
+  const a={t,sym,dir:sc.dir,score:sc.score,price,btc:isBtc,best:0,worst:0,res:false,hit:false,demo:MODE!=='LIVE',eng:[sc.jin,sc.gou,sc.hou].map(Math.round)};
+  ALERTS.unshift(a);save();beep(a);
+}
+function track(t){
+  let ch=false;
+  for(const a of ALERTS){if(a.res)continue;const r=R[a.sym];if(!r||!r.c)continue;
+    const mv=(r.c/a.price-1)*100*a.dir;a.best=Math.max(a.best,mv);a.worst=Math.min(a.worst,mv);
+    if(a.best>=(a.btc?BTC_HIT:ALT_HIT)){a.hit=true;a.res=true;a.hitT=t;ch=true}else if(t-a.t>WIN){a.res=true;ch=true}}
+  if(ch)save();
+}
+
+/* ---------- sound ---------- */
+let AC=null;
+function beep(a){
+  if(!SOUND||!AC)return;
+  const seq=a.dir>0?[660,880]:[880,520];const n=a.score>=80?3:1;let t0=AC.currentTime+.02;
+  for(let k=0;k<n;k++)for(const f of seq){const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.12,t0+.01);g.gain.exponentialRampToValueAtTime(.0001,t0+.16);o.connect(g).connect(AC.destination);o.start(t0);o.stop(t0+.18);t0+=.2}
+}
+$('sound').addEventListener('click',()=>{
+  SOUND=!SOUND;
+  if(SOUND&&!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){SOUND=false}}
+  if(AC&&AC.state==='suspended')AC.resume();
+  $('sound').textContent=SOUND?'🔊 音声 ON':'🔇 音声 OFF';$('sound').setAttribute('aria-pressed',String(SOUND));$('sound').classList.toggle('hot',SOUND);
+  if(SOUND)beep({dir:1,score:50});
+});
+
+/* ---------- websockets ---------- */
+function feedWS(key,urls,onopen,onmsg,ping){
+  urls=[].concat(urls);let delay=3000,ui=0;
+  const go=()=>{
+    let s,pt=null,wd=null,last=Date.now(),got=false;const url=urls[ui%urls.length];
+    const retry=()=>{ui++;setTimeout(go,delay=Math.min(delay*2,60000))};
+    try{s=new WebSocket(url)}catch(e){SRC[key]=0;return retry()}
+    s.onopen=()=>{delay=3000;onopen(s);if(ping)pt=setInterval(()=>{try{ping(s)}catch(e){}},20000);
+      wd=setInterval(()=>{if(Date.now()-last>25000){try{s.close()}catch(e){}}},5000)};
+    s.onmessage=e=>{last=Date.now();got=true;try{onmsg(s,e.data)}catch(err){}};
+    s.onerror=()=>{};
+    s.onclose=()=>{clearInterval(pt);clearInterval(wd);SRC[key]=0;if(key==='bn'){SRC.tick=SRC.liq=SRC.fr=SRC.btc=0}if(got)ui--;retry()};
+  };go();
+}
+const BN='streams=!miniTicker@arr/!forceOrder@arr/!markPrice@arr@1s/btcusdt@aggTrade';
+feedWS('bn',['wss://fstream.binance.com/market/stream?'+BN,'wss://fstream.binance.com/stream?'+BN],()=>{SRC.liq=1},(s,raw)=>{
+  const m=JSON.parse(raw),d=m.data,t=Date.now();if(!d)return;
+  if(m.stream==='!miniTicker@arr'){goLive();ingestMini(d,t);SRC.tick=1;SEEN.tick=t}
+  else if(m.stream==='!markPrice@arr@1s'||m.stream==='!markPrice@arr'){d.forEach(x=>{if(x.s&&x.s.endsWith('USDT')&&R[x.s])R[x.s].fr=+x.r});SRC.fr=1;SEEN.fr=t}
+  else if(d.e==='forceOrder'){const o=d.o;const px=+(o.ap||o.p),q=+(o.z||o.q);if(MODE==='LIVE')ingestLiq(o.s,o.S==='SELL',px*q,t);SRC.liq=1}
+  else if(d.e==='aggTrade'){if(MODE==='LIVE')onBtcTrade(+d.q,!d.m,t);SRC.btc=1;SEEN.btc=t}
+});
+feedWS('bybit','wss://stream.bybit.com/v5/public/linear',s=>s.send(JSON.stringify({op:'subscribe',args:['tickers.BTCUSDT','allLiquidation.BTCUSDT']})),(s,raw)=>{
+  const m=JSON.parse(raw);if(!m.topic||MODE!=='LIVE')return;const t=Date.now();SRC.bybit=1;
+  if(m.topic==='tickers.BTCUSDT'){const v=+(m.data&&m.data.openInterest);if(v){const L=B.oi[B.oi.length-1];if(!L||t-L.t>=5000)B.oi.push({t,v})}}
+  else (m.data||[]).forEach(l=>ingestLiq('BTCUSDT',l.S==='Buy',(+l.v)*(+l.p),t));
+},s=>s.send(JSON.stringify({op:'ping'})));
+feedWS('chain','wss://ws.blockchain.info/inv',s=>s.send(JSON.stringify({op:'unconfirmed_sub'})),(s,raw)=>{
+  const m=JSON.parse(raw);if(m.op!=='utx'||MODE==='DEMO')return;SRC.chain=1;const x=m.x;
+  const big=Math.max(0,...(x.out||[]).map(o=>o.value||0))/1e8;if(big<CFG.whaleMin)return;
+  addWhale({t:Date.now(),hash:x.hash,big,nin:(x.inputs||[]).length,nout:(x.out||[]).length});
+},s=>s.send(JSON.stringify({op:'ping'})));
+function addWhale(w){if(WHALES.some(x=>x.hash===w.hash))return;WHALES.unshift(w);WHALES=WHALES.slice(0,60);save();renderWhales()}
+
+/* OI for the hottest alts (REST, every 30s) */
+async function pollOI(){
+  if(MODE!=='LIVE')return;
+  const top=Object.values(R).filter(r=>r.sc&&r.s!=='BTCUSDT'&&r.qv>=CFG.minQv).sort((a,b)=>b.sc.score-a.sc.score).slice(0,8);
+  for(const r of top){try{const res=await fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol='+r.s);if(!res.ok)throw 0;const j=await res.json();const v=+j.openInterest,t=Date.now();
+    if(v){r.oi.push({t,v});while(r.oi.length&&t-r.oi[0].t>600e3)r.oi.shift();r.oiChg=(v/at(r.oi,t-300e3).v-1)*100;SRC.oirest=1}}catch(e){SRC.oirest=0}}
+}
+setInterval(pollOI,30000);
+
+/* ---------- demo feed (when live streams are unreachable) ---------- */
+let demoT=null;const DM={};
+const DEMO=[['BTC',86000],['ETH',3150],['SOL',182],['XRP',2.31],['DOGE',.205],['BNB',905],['ADA',.71],['AVAX',27.4],['LINK',18.9],['SUI',3.42],['1000PEPE',.0108],['WIF',.86],['TON',3.05],['APT',5.6],['ARB',.41],['OP',.66],['NEAR',2.6],['INJ',13.1],['TIA',1.7],['SEI',.29],['ORDI',8.9],['JUP',.52],['ENA',.58],['ONDO',.94],['FET',.66],['AAVE',268],['UNI',8.4],['LTC',101],['BCH',512],['DOT',3.9],['ATOM',4.4],['FIL',2.5],['ETC',19.6],['HBAR',.21],['TRX',.33],['1000BONK',.021],['PENDLE',4.4],['WLD',1.12],['TAO',372],['HYPE',41.5]];
+function startDemo(){
+  if(MODE==='LIVE'||demoT)return;MODE='DEMO';updMode();
+  const t=Date.now();
+  DEMO.forEach(([n,p],i)=>{const s=n+'USDT';const qv=s==='BTCUSDT'?9e9:Math.exp(15.6+Math.random()*4);
+    DM[s]={c:p,qv,sig:(s==='BTCUSDT'?.00006:.00016)*(1+Math.random()),ev:null};
+    const r=rec(s);r.h=p*1.04;r.l=p*.96;r.fr=(Math.random()-.4)*.0004;
+    for(let k=72;k>=1;k--){const tt=t-k*5000;r.hist.push({t:tt,c:p*(1+(Math.random()-.5)*.002),qv:qv-k*5*qv/86400})}});
+  DM[DEMO[3+Math.floor(Math.random()*20)][0]+'USDT'].ev={dir:-1,until:t+150e3,k:4};
+  demoT=setInterval(demoStep,1000);
+}
+function demoStep(){
+  const t=Date.now(),arr=[];
+  if(Math.random()<.025){const s=DEMO[1+Math.floor(Math.random()*(DEMO.length-1))][0]+'USDT';DM[s].ev={dir:Math.random()<.5?-1:1,until:t+90e3+Math.random()*90e3,k:2+Math.random()*2}}
+  if(Math.random()<.008)DM.BTCUSDT.ev={dir:Math.random()<.5?-1:1,until:t+120e3,k:3};
+  for(const s in DM){const d=DM[s],ev=d.ev&&d.ev.until>t?d.ev:null;
+    const drift=ev?ev.dir*d.sig*ev.k*1.3:0;d.c*=1+drift+(Math.random()-.5)*2*d.sig*(ev?2:1);
+    const mult=ev?6+ev.k*2:(.6+Math.random()*.8);d.qv+=d.qv/86400*mult;
+    const r=R[s];r.h=Math.max(r.h,d.c);r.l=Math.min(r.l,d.c);
+    arr.push({s,c:d.c,o:d.c,h:r.h,l:r.l,q:d.qv});
+    if(ev&&Math.random()<.35)ingestLiq(s,ev.dir<0,d.qv/1440*(.05+Math.random()*.25),t);
+    if(s==='BTCUSDT'){for(let k=0;k<20;k++)onBtcTrade(Math.random()*(ev?1.4:.5),Math.random()<.5+(ev?ev.dir*.3:0),t);
+      const L=B.oi[B.oi.length-1];const v=(L?L.v:57000)*(1+(ev?-ev.dir*.0006:(Math.random()-.5)*.0002));if(!L||t-L.t>=5000)B.oi.push({t,v})}}
+  ingestMini(arr,t);
+  if(Math.random()<.02){const big=CFG.whaleMin*(1+Math.random()*6);addWhale({t,hash:'demo'+t.toString(16),big,nin:1+Math.floor(Math.random()*4),nout:2,demo:true})}
+}
+function goLive(){if(MODE==='LIVE')return;if(demoT){clearInterval(demoT);demoT=null;for(const k in R)delete R[k];B.trades=[];B.mins=[];B.oi=[];B.liq=[];ALERTS=ALERTS.filter(a=>!a.demo);WHALES=WHALES.filter(w=>!w.demo)}MODE='LIVE';updMode()}
+setTimeout(()=>{if(MODE!=='LIVE')startDemo()},7000);
+function updMode(){
+  const el=$('mode');
+  if(MODE==='LIVE'){el.textContent='LIVE';el.className='pill up';$('modenote').textContent='Binance先物の全銘柄をライブで監視中。開いて5分ほどは判定の材料が少ないため、反応が控えめになります。'}
+  else if(MODE==='DEMO'){el.textContent='DEMO';el.className='pill gold';$('modenote').textContent='相場データに接続できないため、デモデータで動作中です（実際の相場ではありません）。Claudeのアーティファクト内では外部接続がブロックされます。「ライブ版を開く」から本物の相場で動きます。デモの警報は保存しません。'}
+  else{el.textContent='接続中';el.className='pill gold';$('modenote').textContent='Binance先物に接続しています…'}
+}
+updMode();
+if(/github\.io$/.test(location.hostname))$('golive').hidden=true;
+
+/* ---------- council (SVG) ---------- */
+const NS='http://www.w3.org/2000/svg';
+const hexPts=(cx,cy,r)=>Array.from({length:6},(_,i)=>{const a=Math.PI/180*(60*i-30);return (cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1)}).join(' ');
+const NODES=[{k:'jin',n:'迅',e:'JIN',x:92,y:92,r:52},{k:'gou',n:'轟',e:'GOU',x:308,y:92,r:52},{k:'hou',n:'崩',e:'HOU',x:200,y:286,r:50}];
+(function buildHex(){
+  const svg=$('hex');let h='';
+  h+=`<polygon points="${hexPts(200,160,150)}" fill="none" stroke="#3a2b1e" stroke-dasharray="3 5"/>`;
+  NODES.forEach(n=>{h+=`<line x1="200" y1="160" x2="${n.x}" y2="${n.y}" stroke="#3a2b1e" stroke-width="2" id="ln-${n.k}"/>`});
+  NODES.forEach(n=>{h+=`<g><polygon id="hx-${n.k}" points="${hexPts(n.x,n.y,n.r)}" fill="#ff6a1a" fill-opacity=".05" stroke="#3a2b1e" stroke-width="2"/>
+    <text x="${n.x}" y="${n.y-12}" text-anchor="middle" font-size="26" fill="#efe6d8" style="font-family:var(--f-disp)">${n.n}</text>
+    <text x="${n.x}" y="${n.y+8}" text-anchor="middle" font-size="9" fill="#8f7d6a" letter-spacing="2">${n.e}</text>
+    <text id="tx-${n.k}" x="${n.x}" y="${n.y+30}" text-anchor="middle" font-size="18" fill="#efe6d8">—</text></g>`});
+  h+=`<polygon id="hx-c" points="${hexPts(200,160,62)}" fill="#140f0b" stroke="#ff6a1a" stroke-width="2.5"/>
+    <text x="200" y="128" text-anchor="middle" font-size="9" fill="#8f7d6a" letter-spacing="2">危険度</text>
+    <text id="tx-c" x="200" y="166" text-anchor="middle" font-size="36" fill="#efe6d8" style="font-family:var(--f-disp)">—</text>
+    <text id="tx-t" x="200" y="186" text-anchor="middle" font-size="12" fill="#8f7d6a">待機中</text>
+    <text id="tx-d" x="200" y="203" text-anchor="middle" font-size="10" fill="#8f7d6a"></text>`;
+  svg.innerHTML=h;
+})();
+const COL={t0:'#8f7d6a',t1:'#7fd6ff',t2:'#ffc247',t3:'#ff3b4e'};
+function renderCouncil(){
+  const s=B.sc,r=R.BTCUSDT;
+  $('btcpx').textContent=r&&r.c?'BTCUSDT '+fpx(r.c)+(r.sc?' · 5分 '+f2(r.sc.r5)+'%':''):'—';
+  if(!s)return;
+  NODES.forEach(n=>{const v=s[n.k];const hx=$('hx-'+n.k);hx.setAttribute('fill-opacity',(.05+v/100*.55).toFixed(2));hx.setAttribute('stroke',v>=60?'#ff6a1a':'#3a2b1e');
+    $('ln-'+n.k).setAttribute('stroke',v>=60?'#ff6a1a':'#3a2b1e');$('tx-'+n.k).textContent=Math.round(v)});
+  const tr=tier(s.score);
+  $('tx-c').textContent=s.score;$('tx-c').setAttribute('fill',COL[tr.c]);
+  $('tx-t').textContent=tr.k+' '+tr.e;$('tx-t').setAttribute('fill',COL[tr.c]);
+  $('tx-d').textContent=s.dir>0?'▲ 急騰方向':s.dir<0?'▼ 急落方向':'';$('tx-d').setAttribute('fill',s.dir>0?'#3ddc97':'#ff3b4e');
+  $('hx-c').setAttribute('stroke',COL[tr.c]);
+  $('cj').textContent=`1分 ${f2(s.r1)}% · 5分 ${f2(s.r5)}%`;
+  $('cg').textContent=s.avg?`1分デルタ ${f2(s.d1,1)}₿（平常比 ${(Math.abs(s.d1)/s.avg).toFixed(1)}倍）`:`出来高 平常比 ${s.ratio.toFixed(1)}倍`;
+  $('ch').textContent=`清算5分 ${usd(s.lq)} · 建玉5分 ${s.oi5!=null?f2(s.oi5)+'%':'—'} · FR ${s.fr!=null?f2(s.fr*100,4)+'%':'—'}`;
+}
+const ACT=(s,isBtc)=>{
+  const tr=tier(s.score),dom=['jin','gou','hou'].sort((a,b)=>s[b]-s[a])[0];
+  if(s.score<40)return '異常なし。通常監視。';
+  const base={jin:'値動きが先行。飛び乗り注意、出来高の追随を確認',gou:'出来高が爆発。ブレイクの本物かを建玉で確認',hou:'清算・建玉が主導。連鎖の後の反動に注意'}[dom];
+  const side=s.dir>0?(isBtc?'ショートの踏み上げ監視':'高値掴みに注意'):(isBtc?'ロングの投げ監視':'引き金（取引所への入金・清算連鎖）を監視');
+  return (tr.k==='非常'?'【即時確認】':tr.k==='警戒'?'【要警戒】':'')+base+'。'+side+'。';
+};
+
+/* ---------- renderers ---------- */
+function renderStatus(){
+  let best=null;
+  if(B.sc)best={src:'BTC（深掘り）',s:B.sc,btc:true};
+  for(const r of Object.values(R)){if(!r.sc||r.s==='BTCUSDT'||r.qv<CFG.minQv)continue;if(!best||r.sc.score>best.s.score)best={src:r.s.replace('USDT',''),s:r.sc,btc:false}}
+  if(!best)return;
+  const tr=tier(best.s.score);
+  $('st-src').textContent=best.src;
+  $('st-score').innerHTML=`<span class="big ${tr.c}">${best.s.score}</span> / 100 · 合議 ${best.s.cons}/3`;
+  $('st-tier').innerHTML=`<span class="tier ${tr.c}${tr.c==='t3'?' blink':''}">${tr.k} ${tr.e}</span>`;
+  $('st-dir').innerHTML=best.s.dir>0?'<span class="up">▲ 急騰</span>':best.s.dir<0?'<span class="dn">▼ 急落</span>':'—';
+  $('st-act').textContent=ACT(best.s,best.btc);
+}
+function renderScan(){
+  const rows=Object.values(R).filter(r=>r.sc&&r.qv>=CFG.minQv&&(FILTER==='all'||(FILTER==='up'?r.sc.dir>0:r.sc.dir<0))).sort((a,b)=>b.sc.score-a.sc.score);
+  $('scaninfo').textContent=`${Object.values(R).filter(r=>r.qv>=CFG.minQv).length}銘柄を監視`;
+  if(!rows.length){$('scanbody').innerHTML='<tr><td colspan="7" class="dim">データ受信待ち…</td></tr>';return}
+  const bar=v=>`<i><b style="width:${Math.round(v)}%;background:${v>=60?'var(--ember)':'var(--dim)'}"></b></i>`;
+  $('scanbody').innerHTML=rows.slice(0,15).map(r=>{const s=r.sc,tr=tier(s.score);
+    return `<tr class="${s.score>=80?'hot':s.score>=60?'warm':''}"><td class="sym">${r.s.replace('USDT','')}</td><td class="${s.r1>=0?'up':'dn'}">${f2(s.r1)}%</td><td class="${s.r5>=0?'up':'dn'}">${f2(s.r5)}%</td><td><span class="bars">${bar(s.jin)}${bar(s.gou)}${bar(s.hou)}</span></td><td>${s.cons}/3</td><td class="score ${tr.c}">${s.score}</td><td><span class="tier ${tr.c}">${tr.k}</span></td></tr>`}).join('');
+}
+function renderHist(){
+  const t=Date.now(),L=ALERTS.filter(a=>t-a.t<72*36e5);
+  $('histn').textContent=L.length+'件';
+  if(!L.length)return;
+  $('hist').innerHTML=L.slice(0,80).map(a=>{const tr=tier(a.score);
+    const res=a.lost?'<span class="res dim">追跡不可</span>':!a.res?`<span class="res gold">追跡中 ${f2(a.best,1)}%</span>`:a.hit?`<span class="res up">的中 ${f2(a.best,1)}%</span>`:`<span class="res dn">外れ ${f2(a.best,1)}%</span>`;
+    return `<div class="item"><span class="t">${jst(a.t,true)}</span><span><b>${a.sym.replace('USDT','')}</b> <span class="chip ${a.dir>0?'up':'dn'}">${a.dir>0?'急騰':'急落'}</span> <span class="${tr.c}">${a.score}</span></span>${res}<span class="m">迅${a.eng[0]} 轟${a.eng[1]} 崩${a.eng[2]} · @${fpx(a.price)}${a.demo?' · DEMO':''}</span></div>`}).join('');
+}
+function renderStats(){
+  const done=ALERTS.filter(a=>a.res&&!a.lost);
+  const cell=arr=>{if(!arr.length)return '<span class="dim">—</span>';const h=arr.filter(a=>a.hit).length;const p=h/arr.length*100;return `<b class="${p>=60?'up':p>=40?'gold':'dn'}">${p.toFixed(0)}%</b> <span class="dim">(${h}/${arr.length})</span>`};
+  const rows=[['アルト 80+',a=>!a.btc&&a.score>=80],['アルト 60–79',a=>!a.btc&&a.score<80],['BTC',a=>a.btc]];
+  $('stat').innerHTML=rows.map(([n,f])=>{const g=done.filter(f);return `<tr><td>${n}</td><td>${cell(g.filter(a=>a.dir>0))}</td><td>${cell(g.filter(a=>a.dir<0))}</td><td>${cell(g)}</td></tr>`}).join('');
+}
+function renderWhales(){
+  const t=Date.now(),L=WHALES.filter(w=>t-w.t<72*36e5&&w.big>=CFG.whaleMin);
+  $('whn').textContent=L.length+'件';
+  if(!L.length)return;
+  const px=R.BTCUSDT&&R.BTCUSDT.c;
+  $('whales').innerHTML=L.slice(0,40).map(w=>`<div class="item"><span class="t">${jst(w.t,true)}</span><span><b class="gold">${w.big.toLocaleString('en-US',{maximumFractionDigits:1})} BTC</b>${px?' <span class="dim">≈'+usd(w.big*px)+'</span>':''}</span><span class="dim">${w.nin}→${w.nout}</span><span class="m">${w.demo?'DEMO':`<a href="https://mempool.space/tx/${w.hash}" target="_blank" rel="noopener">${w.hash.slice(0,10)}…${w.hash.slice(-6)}</a>`}</span></div>`).join('');
+}
+function renderSys(){
+  const t=Date.now();
+  const fresh=k=>SEEN[k]&&t-SEEN[k]<90e3;
+  const L=[['全銘柄ティッカー 同期',MODE==='DEMO'?'DEMO':fresh('tick')?'OK':'接続中'],['清算フィード 受信',MODE==='DEMO'?'DEMO':SRC.liq?'OK':'接続中'],['資金調達率 同期',MODE==='DEMO'?'DEMO':fresh('fr')?'OK':'接続中'],['BTC約定ストリーム',MODE==='DEMO'?'DEMO':fresh('btc')?'OK':'接続中'],['Bybit建玉 照合',MODE==='DEMO'?'DEMO':SRC.bybit?'OK':'接続中'],['アルト建玉 照会',MODE!=='LIVE'?'STANDBY':SRC.oirest?'OK':'STANDBY'],['オンチェーン監視 BTC',MODE==='DEMO'?'DEMO':SRC.chain?'OK':'接続中'],['三核合議エンジン',(B.sc||Object.keys(R).length)?'ONLINE':'起動中']];
+  $('sys').innerHTML=L.map(([n,v])=>`<div><span>${n}</span><i></i><b class="${v==='OK'||v==='ONLINE'?'up':v==='DEMO'||v==='STANDBY'?'gold':'dim'}">${v}</b></div>`).join('');
+  const ok=L.filter(x=>x[1]==='OK'||x[1]==='ONLINE').length;const p=MODE==='DEMO'?0:ok/L.length*100;
+  $('syncv').textContent=p.toFixed(1)+'%';$('syncb').style.width=p+'%';
+}
+
+/* ---------- loop ---------- */
+function tick(){
+  const t=Date.now();
+  for(const r of Object.values(R))r.sc=scoreRec(r,t);
+  B.sc=scoreBTC(t);
+  if(MODE!=='WAIT'){
+    if(B.sc&&R.BTCUSDT)maybeAlert('BTCUSDT',B.sc,R.BTCUSDT.c,true,t);
+    for(const r of Object.values(R))if(r.s!=='BTCUSDT'&&r.qv>=CFG.minQv)maybeAlert(r.s,r.sc,r.c,false,t);
+    track(t);
+  }
+  renderCouncil();renderStatus();renderScan();renderHist();renderStats();renderSys();
+}
+setInterval(tick,2000);
+setInterval(()=>{$('clock').textContent=jst(Date.now())+' JST'},1000);
+renderWhales();renderHist();renderStats();renderSys();
+
+/* ---------- controls ---------- */
+document.querySelectorAll('[data-f]').forEach(b=>b.addEventListener('click',()=>{FILTER=b.dataset.f;document.querySelectorAll('[data-f]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderScan()}));
+$('minqv').value=String(CFG.minQv);$('whalemin').value=String(CFG.whaleMin);
+$('minqv').addEventListener('change',e=>{CFG.minQv=+e.target.value;LS.set('sk-cfg',CFG);renderScan()});
+$('whalemin').addEventListener('change',e=>{CFG.whaleMin=+e.target.value;LS.set('sk-cfg',CFG);renderWhales()});
+
+/* ---------- クロちゃん用スナップショット ---------- */
+function snapText(){
+  const t=Date.now(),L=[],mins=Math.round((t-T0)/60000);
+  L.push(`【三核合議スナップショット】${new Date(t).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false})} JST（ページ表示 ${mins}分・${MODE==='LIVE'?'LIVE':'DEMO＝実データではない'}）`);
+  const s=B.sc;
+  if(s){const tr=tier(s.score);L.push(`■BTC 危険度${s.score}（${tr.k}）合議${s.cons}/3 方向${s.dir>0?'急騰':s.dir<0?'急落':'—'}・迅${Math.round(s.jin)} 轟${Math.round(s.gou)} 崩${Math.round(s.hou)}`);
+    L.push(`　1分${f2(s.r1)}% 5分${f2(s.r5)}%・1分デルタ${s.d1!=null?f2(s.d1,1)+'₿':'—'}・清算5分${usd(s.lq)}・建玉5分${s.oi5!=null?f2(s.oi5)+'%':'—'}・FR${s.fr!=null?f2(s.fr*100,4)+'%':'—'}`)}
+  const top=Object.values(R).filter(r=>r.sc&&r.s!=='BTCUSDT'&&r.qv>=CFG.minQv).sort((a,b)=>b.sc.score-a.sc.score).slice(0,10);
+  L.push('■アルト上位10（危険度順）');
+  top.forEach(r=>{const x=r.sc;L.push(`　${r.s.replace('USDT','')} ${x.score}（${tier(x.score).k}・${x.dir>0?'急騰':'急落'}）1分${f2(x.r1)}% 5分${f2(x.r5)}% 迅${Math.round(x.jin)} 轟${Math.round(x.gou)} 崩${Math.round(x.hou)}${r.fr!=null?' FR'+f2(r.fr*100,3)+'%':''}`)});
+  const recent=ALERTS.filter(a=>t-a.t<6*36e5).slice(0,10);
+  L.push(`■直近6時間の警報 ${recent.length}件`);
+  recent.forEach(a=>L.push(`　${jst(a.t,true)} ${a.sym.replace('USDT','')} ${a.dir>0?'急騰':'急落'} ${a.score} → ${a.lost?'追跡不可':!a.res?'追跡中':a.hit?'的中':'外れ'}（最大${f2(a.best,1)}%）`));
+  const done=ALERTS.filter(a=>a.res&&!a.lost);if(done.length)L.push(`■的中率（7日）${(done.filter(a=>a.hit).length/done.length*100).toFixed(0)}%（${done.filter(a=>a.hit).length}/${done.length}）`);
+  const wh=WHALES.filter(w=>t-w.t<6*36e5&&w.big>=CFG.whaleMin);
+  L.push(`■BTC大口送金（6時間・${CFG.whaleMin}BTC以上）${wh.length}件${wh.length?'・最大'+Math.max(...wh.map(w=>w.big)).toFixed(0)+'BTC':''}`);
+  return L.join('\n');
+}
+$('snapbtn').addEventListener('click',()=>{
+  const txt=snapText(),btn=$('snapbtn'),box=$('snapbox');box.value=txt;
+  const done=ok=>{btn.textContent=ok?'✓ コピーしました':'下の枠を長押しでコピー';setTimeout(()=>{btn.textContent='📋 クロちゃん用コピー'},2500)};
+  const fb=()=>{box.hidden=false;box.focus();box.select();done(false)};
+  try{navigator.clipboard.writeText(txt).then(()=>{box.hidden=true;done(true)},fb)}catch(e){fb()}
+});
+})();
+</script>
+
+</body></html>
