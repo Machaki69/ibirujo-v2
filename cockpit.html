@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>BTC全部喰いコックピット</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky tab bar → [取引所比較] native view (summary tiles, FR compare, OI compare, liquidation chart) | [フローコア] and [三核合議] embedded pages. Single dark look by choice. */
+:root{
+  --bg:#05080d; --panel:#0a1119; --line:#16314a; --fg:#cfe3f2; --dim:#5f7d96;
+  --buy:#22e6b8; --sell:#ff4d6d; --accent:#3aa8ff; --gold:#ffc94a; --liqL:#b06cff; --liqS:#9fe8ff;
+  --x-binance:#f3ba2f; --x-bybit:#ff7a45; --x-okx:#d8dee6; --x-bitget:#22c7d6; --x-hyper:#8f7dff; --x-deribit:#4f8cff; --x-edgex:#e85dce;
+  --f-display:"Chakra Petch",ui-monospace,monospace;
+  --f-data:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-data);font-size:12px;padding-inline:12px;padding-block:10px 24px;font-variant-numeric:tabular-nums}
+@media (min-width:500px){body{padding-inline:16px}}
+.wrap{max-width:1400px;margin:0 auto;display:grid;gap:8px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;border:1px solid var(--line);background:var(--panel);padding:8px 10px}
+.logo{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.05em;display:flex;align-items:center;gap:8px}
+.logo b{background:var(--gold);color:var(--bg);padding:2px 6px;font-size:13px}
+.logo small{display:block;font-family:var(--f-data);font-size:9px;letter-spacing:.14em;color:var(--dim);font-weight:400}
+.hr{margin-left:auto;display:flex;gap:12px;align-items:center}
+.clock{font-family:var(--f-display);font-size:17px}
+.pill{font-size:9px;letter-spacing:.12em;padding:2px 7px;border:1px solid currentColor;text-transform:uppercase}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:6px;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line)}
+nav button{flex:1;font:600 12px var(--f-data);letter-spacing:.06em;padding:9px 6px;background:var(--panel);color:var(--dim);border:1px solid var(--line);cursor:pointer}
+nav button[aria-selected="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+nav button:focus-visible,.btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.panel{border:1px solid var(--line);background:var(--panel);padding:8px 10px;min-width:0}
+.ph{display:flex;justify-content:space-between;gap:8px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.ph b{color:var(--fg);font-weight:600}
+.ph b::before{content:"◆ ";color:var(--accent)}
+.note{font-size:10px;color:var(--dim);line-height:1.6;margin:6px 0 0}
+.up{color:var(--buy)} .dn{color:var(--sell)} .dim{color:var(--dim)} .gold{color:var(--gold)}
+.row{display:grid;gap:8px;grid-template-columns:1fr}
+@media (min-width:900px){.r2{grid-template-columns:1fr 1fr}}
+.tiles{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.tile{border:1px solid var(--line);background:var(--panel);padding:7px 10px;display:grid;gap:2px;min-width:0}
+.tile span{font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.tile strong{font-family:var(--f-display);font-size:19px;font-weight:500}
+.tile em{font-style:normal;font-size:10px;color:var(--dim);overflow-wrap:anywhere}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:600 12px var(--f-data);padding:6px 12px;border:1px solid var(--gold);background:var(--gold);color:var(--bg);cursor:pointer;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:9px;letter-spacing:.08em;padding:2px 7px;border:1px solid var(--line);color:var(--dim)}
+.chip::before{content:"● "}
+.chip.on{color:var(--buy);border-color:var(--buy)} .chip.wait{color:var(--gold)} .chip.off{color:var(--sell)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:11px}
+th{font-weight:500;font-size:9px;letter-spacing:.08em;color:var(--dim);text-align:right;padding:4px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:5px 6px;text-align:right;border-bottom:1px solid rgba(22,49,74,.6);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+.ex{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.ex i{width:9px;height:9px;display:inline-block}
+.dbar{position:relative;height:8px;min-width:90px;background:rgba(22,49,74,.5)}
+.dbar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--dim)}
+.dbar b{position:absolute;top:0;bottom:0}
+.share{display:flex;height:12px;margin:4px 0 2px}
+.share i{display:block;height:100%}
+canvas{display:block;width:100%}
+.cv{height:200px} .cv-l{height:240px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:var(--dim);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:3px;vertical-align:middle;margin-right:4px}
+.lqlist{display:grid;gap:3px;max-height:220px;overflow-y:auto;margin-top:8px}
+.lq{display:grid;grid-template-columns:auto 1fr auto;gap:8px;font-size:11px;padding:3px 6px;border-left:3px solid var(--line);background:rgba(22,49,74,.25)}
+#v-flow,#v-sankaku{margin-inline:-12px}
+@media (min-width:500px){#v-flow,#v-sankaku{margin-inline:-16px}}
+iframe{display:block;width:100%;border:0;background:var(--bg);min-height:80vh}
+#snapbox{width:100%;font:11px/1.5 var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--gold);padding:8px;margin-top:8px}
+[hidden]{display:none!important}
+.vcard{display:grid;gap:10px}
+@media (min-width:900px){.vgrid{display:grid;grid-template-columns:1.1fr 1fr;gap:8px}}
+.vtop{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.verdict{font-family:var(--f-display);font-size:28px;font-weight:700;letter-spacing:.04em}
+.verdict.dim{color:var(--fg)}
+.score{font-family:var(--f-display);font-size:40px;font-weight:700;line-height:1}
+.sigpill{font-family:var(--f-display);font-weight:700;font-size:16px;padding:4px 14px;border:2px solid currentColor;letter-spacing:.1em}
+.sigpill.long{color:var(--bg);background:var(--buy);border-color:var(--buy)} .sigpill.short{color:var(--bg);background:var(--sell);border-color:var(--sell)} .sigpill.wait{color:var(--dim)}
+.gauge{position:relative;height:14px;background:linear-gradient(90deg,var(--sell),rgba(22,49,74,.9) 35%,rgba(22,49,74,.9) 65%,var(--buy));margin:6px 0 2px}
+.gauge::before,.gauge::after{content:"";position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--fg);opacity:.35}
+.gauge::before{left:27.5%} .gauge::after{left:72.5%}
+#sg-needle{position:absolute;top:-6px;bottom:-6px;width:4px;margin-left:-2px;background:var(--fg);box-shadow:0 0 8px var(--fg);transition:left .6s}
+.glab{display:flex;justify-content:space-between;font-size:9px;color:var(--dim)}
+.why{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:13px}
+.why li{display:flex;gap:8px}
+.why li span{font-weight:700}
+.fac{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr) 90px 36px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(22,49,74,.6)}
+.fac b{font-size:12px} .fac span{display:block;font-size:9px;color:var(--dim)}
+.ftxt{font-size:10px;overflow-wrap:anywhere}
+.fpt{text-align:right;font-family:var(--f-display);font-size:15px}
+.dbar.wide{min-width:0}
+@media (max-width:560px){.fac{grid-template-columns:minmax(0,1fr) 70px 32px}.ftxt{grid-column:1/-1;order:5}}
+.walls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.wall{display:grid;grid-template-columns:auto 1fr;gap:0 8px;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(22,49,74,.5)}
+.wall span:last-child{grid-column:1/-1;font-size:9px}
+.whale{border-color:var(--gold);background:linear-gradient(180deg,rgba(255,201,74,.07),transparent 40%),var(--panel)}
+.whale .ph b::before{content:"🐋 ";color:inherit}
+.whcols{display:grid;gap:10px;grid-template-columns:1fr}
+@media (min-width:700px){.whcols{grid-template-columns:1fr 1fr}}
+.whrow{position:relative;display:grid;grid-template-columns:auto 1fr;gap:1px 10px;padding:6px 8px;margin-bottom:4px;border:1px solid var(--line);border-left-width:4px;overflow:hidden;font-size:11px}
+.whrow.b{border-left-color:var(--buy)} .whrow.a{border-left-color:var(--sell)}
+.whrow .whp{font-family:var(--f-display);font-size:16px}
+.whrow .whq{font-family:var(--f-display);font-size:16px;color:var(--gold);text-align:right}
+.whrow>span:nth-child(4){text-align:right}
+.whrow.huge{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.whrow.huge .whq{font-size:19px}
+.whrow.new{animation:whpulse 1.2s ease-in-out infinite}
+@keyframes whpulse{50%{background:rgba(255,201,74,.14)}}
+.whbar{position:absolute;left:0;bottom:0;height:3px;background:var(--gold);opacity:.7}
+.whg{display:grid;grid-template-columns:auto 1fr;gap:0 10px;font-size:10px;padding:3px 0;border-bottom:1px solid rgba(22,49,74,.5)}
+.whg span:last-child{grid-column:2}
+@media (prefers-reduced-motion:reduce){.whrow.new{animation:none;background:rgba(255,201,74,.1)}}
+.plan{font-size:11px;color:var(--fg)}
+.stat2{display:grid;gap:4px;font-size:12px;margin-bottom:8px}
+label.opt{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="logo"><b>₿</b><div>BTC全部喰い COCKPIT<small>総評シグナル · 取引所比較 · フローコア · 三核合議</small></div></div>
+    <div class="hr"><span id="mode" class="pill gold">接続中</span><span class="clock" id="clock">--:--:--</span></div>
+  </header>
+  <nav role="tablist" aria-label="画面切り替え">
+    <button role="tab" id="tab-signal" aria-selected="true" aria-controls="v-signal" data-v="signal">総評シグナル</button>
+    <button role="tab" id="tab-compare" aria-selected="false" aria-controls="v-compare" data-v="compare">取引所比較</button>
+    <button role="tab" id="tab-flow" aria-selected="false" aria-controls="v-flow" data-v="flow">フローコア</button>
+    <button role="tab" id="tab-sankaku" aria-selected="false" aria-controls="v-sankaku" data-v="sankaku">三核合議</button>
+  </nav>
+
+  <!-- ===== 総評シグナル ===== -->
+  <section id="v-signal" role="tabpanel" aria-labelledby="tab-signal" class="wrap" style="gap:8px">
+    <div class="panel vcard">
+      <div class="ph"><b>総評 · BTC</b><span id="sg-cov">—</span></div>
+      <div class="vtop"><span class="score" id="sg-score">—</span><span class="verdict" id="sg-verdict">集計中…</span><span class="sigpill wait" id="sg-pill">WAIT</span><span class="dim" style="margin-left:auto">BTCUSDT <b id="sg-px" style="color:var(--fg)">—</b></span></div>
+      <div><div class="gauge" aria-hidden="true"><i id="sg-needle" style="left:50%"></i></div><div class="glab"><span>−100 ショート</span><span>−45</span><span>0</span><span>+45</span><span>ロング +100</span></div></div>
+      <p class="note" id="sg-sub" style="margin:0"></p>
+      <ul class="why" id="sg-why"></ul>
+      <p class="plan" id="sg-plan"></p>
+      <div class="ctrl"><button type="button" class="btn" id="sg-copy">📋 クロちゃん用コピー</button><button type="button" class="btn ghost" id="sg-sound" aria-pressed="false">🔇 シグナル音 OFF</button></div>
+      <textarea id="sg-box" rows="12" readonly hidden aria-label="総評スナップショット" style="width:100%;font:11px/1.5 var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--gold);padding:8px"></textarea>
+    </div>
+    <div class="panel whale">
+      <div class="ph"><b>大口注文 · 6取引所の板</b><span><label for="wh-min" style="display:inline-flex;gap:6px;align-items:center">しきい値 <select id="wh-min" style="font:500 11px var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:3px"><option value="50">50 BTC</option><option value="100">100 BTC</option><option value="200">200 BTC</option><option value="500">500 BTC</option></select></label></span></div>
+      <p style="margin:0 0 8px;font-size:12px" id="wh-sum">—</p>
+      <div class="whcols"><div><div class="ph" style="margin-bottom:4px"><b>買いの大口</b><span>近い順</span></div><div id="wh-bid"></div></div><div><div class="ph" style="margin-bottom:4px"><b>売りの大口</b><span>近い順</span></div><div id="wh-ask"></div></div></div>
+      <div class="ph" style="margin-top:10px"><b>消えた大口（30分）</b><span>約定 = 価格が届いて食われた / 取消 = 届く前に消えた</span></div>
+      <div id="wh-gone"></div>
+      <p class="note">しきい値の5倍以上は「超大口」として金枠で強調し、出てから1分は点滅します。シグナル音がONなら、±1%以内に新しい大口が出たときに低い音で知らせます。Hyperliquidは$10単位にまとめた量です。Binanceは取得範囲（上位1000段）より外の注文は見えません。</p>
+    </div>
+    <div class="vgrid" style="display:grid;gap:8px">
+      <div class="panel">
+        <div class="ph"><b>7つの材料</b><span>点数 = 重み × 向き</span></div>
+        <div id="sg-factors"></div>
+        <p class="note">資金調達率だけは逆張り（ロングが過熱していたらマイナス）で数えます。材料が欠けた場合は、残りの材料だけで100点満点に換算します。</p>
+      </div>
+      <div class="panel">
+        <div class="ph"><b>スコアの推移</b><span>▲LONG ▼SHORT ●EXIT</span></div>
+        <canvas id="cv-sig" class="cv"></canvas>
+        <div class="ph" style="margin-top:12px"><b>シグナルの成績</b><span>このブラウザに14日保存</span></div>
+        <div class="stat2" id="sg-stat"></div>
+        <div class="tbl" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>時刻</th><th>シグナル</th><th>スコア</th><th>価格</th><th>15分後</th><th>60分後</th></tr></thead><tbody id="sg-log"></tbody></table></div>
+      </div>
+    </div>
+    <p class="note">シグナルは判断材料のひとつで、利益を保証するものではありません。自動売買につなぐ前に、成績表でしばらく様子を見てください。</p>
+  </section>
+
+  <!-- ===== 取引所比較 ===== -->
+  <section id="v-compare" role="tabpanel" aria-labelledby="tab-compare" class="wrap" style="gap:8px" hidden>
+    <div class="panel">
+      <div class="ctrl">
+        <button type="button" class="btn" id="snapbtn">📋 クロちゃん用コピー</button>
+        <a class="btn ghost" id="golive" href="https://machaki69.github.io/ibirujo-v2/cockpit.html" target="_blank" rel="noopener">● ライブ版を開く ↗</a>
+        <label class="opt" for="bgsankaku"><input type="checkbox" id="bgsankaku" checked> 三核合議を裏でも動かす（警報を逃さない）</label>
+      </div>
+      <textarea id="snapbox" rows="12" readonly hidden aria-label="スナップショット"></textarea>
+      <div class="chips" id="chips" style="margin-top:8px"></div>
+      <p class="note" id="modenote"></p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><span>合計OI · 7取引所</span><strong id="t-oi">—</strong><em id="t-oi2">接続待ち</em></div>
+      <div class="tile"><span>OI加重 資金調達率（8h換算）</span><strong id="t-fr">—</strong><em id="t-fr2">接続待ち</em></div>
+      <div class="tile"><span>FR乖離 · 最大−最小</span><strong id="t-sp">—</strong><em id="t-sp2">接続待ち</em></div>
+      <div class="tile"><span>清算 · 直近60分</span><strong id="t-lq">—</strong><em id="t-lq2">接続待ち</em></div>
+    </div>
+
+    <section class="row r2">
+      <div class="panel">
+        <div class="ph"><b>資金調達率 · 取引所別</b><span>8h換算で比較</span></div>
+        <div class="tbl"><table><thead><tr><th>取引所</th><th>FR（実際）</th><th>間隔</th><th>8h換算</th><th>年率</th><th>次回</th><th>−0.05%〜+0.05%</th></tr></thead><tbody id="frbody"></tbody></table></div>
+        <canvas id="cv-fr" class="cv" style="margin-top:10px"></canvas>
+        <p class="note">線は8h換算FRの推移（10秒ごと）。Hyperliquidは1時間ごと、Deribitは8h換算の値をそのまま使います。edgeXは間隔が取れない間は比較から外します。</p>
+      </div>
+      <div class="panel">
+        <div class="ph"><b>建玉（OI） · 取引所別</b><span id="oitot">—</span></div>
+        <div class="share" id="oishare"></div>
+        <div class="tbl"><table><thead><tr><th>取引所</th><th>OI（BTC）</th><th>USD</th><th>シェア</th><th>開いてから</th><th>直近5分</th></tr></thead><tbody id="oibody"></tbody></table></div>
+        <canvas id="cv-oi" class="cv" style="margin-top:10px"></canvas>
+        <p class="note">線は各取引所のOIを、ページを開いた時点を0%としてそろえた変化率。どこで建玉が積まれ、どこで降ろされているかを比べます。</p>
+      </div>
+    </section>
+
+    <div class="panel">
+      <div class="ph"><b>清算 · 取引所別 · 1分ごと</b><span>上 = ロング清算 · 下 = ショート清算</span></div>
+      <canvas id="cv-lq" class="cv-l"></canvas>
+      <div class="legend" id="lqlegend"></div>
+      <div class="tbl" style="margin-top:8px"><table><thead><tr><th>取引所</th><th>ロング清算</th><th>ショート清算</th><th>件数</th><th>最大</th></tr></thead><tbody id="lqbody"></tbody></table></div>
+      <div class="lqlist" id="lqlist"><p class="note">$100k以上の清算がここに流れます。</p></div>
+      <p class="note">清算を公開しているのはBinance・Bybit・OKXの3つ。Binanceは同じ銘柄の清算を1秒に1件まで（その秒の最大）しか配信しないため、実際より少なめに出ます。</p>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>板（オーダーブック） · 取引所別</b><span>±0.5% / ±1% の厚み</span></div>
+      <div class="tbl"><table><thead><tr><th>取引所</th><th>買い±0.5%</th><th>売り±0.5%</th><th>偏り</th><th>買い±1%</th><th>売り±1%</th><th>スプレッド</th></tr></thead><tbody id="bkbody"></tbody></table></div>
+      <canvas id="cv-book" class="cv" style="margin-top:10px"></canvas>
+      <div class="walls" id="walls"></div>
+      <p class="note">グラフは6取引所の板を$50刻みで合算したもの（中央が現在値、左が買い板、右が売り板）。Binanceは5秒ごとの取得で上位1000段まで、Bitgetは上位15段、Hyperliquidは$10単位にまとめた上位20段なので、遠い価格帯は実際より薄く見えます。見せ板やすぐ消える注文も含みます。</p>
+    </div>
+  </section>
+
+  <!-- ===== 埋め込み ===== -->
+  <section id="v-flow" role="tabpanel" aria-labelledby="tab-flow" hidden>
+    <iframe id="f-flow" data-src="btc-flow-core.html" title="BTC Flow Core"></iframe>
+  </section>
+  <section id="v-sankaku" role="tabpanel" aria-labelledby="tab-sankaku" hidden>
+    <iframe id="f-sankaku" data-src="sankaku.html" title="三核合議システム"></iframe>
+  </section>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const css=getComputedStyle(document.documentElement);const tok=n=>css.getPropertyValue(n).trim();
+const C={line:tok('--line'),dim:tok('--dim'),fg:tok('--fg'),buy:tok('--buy'),sell:tok('--sell'),gold:tok('--gold')};
+const f0=n=>n.toLocaleString('en-US',{maximumFractionDigits:0});
+const f1=n=>n.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+const sg=(v,d=2)=>(v>=0?'+':'')+v.toFixed(d);
+const usd=v=>{const a=Math.abs(v);return (v<0?'-':'')+(a>=1e9?'$'+(a/1e9).toFixed(2)+'B':a>=1e6?'$'+(a/1e6).toFixed(1)+'M':'$'+(a/1e3).toFixed(1)+'k')};
+const cd=t=>{if(!t)return '—';const s=Math.max(0,Math.floor((t-Date.now())/1000));return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor(s%3600/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const jst=(t,sec)=>new Date(t).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false,hour:'2-digit',minute:'2-digit',second:sec?'2-digit':undefined});
+const T0=Date.now();
+let MODE='WAIT';
+
+/* ---------- tabs & embedded pages ---------- */
+const VIEWS=['signal','compare','flow','sankaku'];
+function loadFrame(id){const f=$(id);if(f&&!f.src)f.src=f.dataset.src}
+function show(v){
+  if(!VIEWS.includes(v))v='signal';
+  VIEWS.forEach(x=>{$('v-'+x).hidden=x!==v;$('tab-'+x).setAttribute('aria-selected',String(x===v))});
+  if(v==='flow')loadFrame('f-flow');if(v==='sankaku')loadFrame('f-sankaku');
+  LS.set('ck-view',v);
+}
+document.querySelectorAll('nav [data-v]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.v)));
+const BG=LS.get('ck-bgsankaku',true);$('bgsankaku').checked=BG;if(BG)loadFrame('f-sankaku');
+$('bgsankaku').addEventListener('change',e=>{LS.set('ck-bgsankaku',e.target.checked);if(e.target.checked)loadFrame('f-sankaku')});
+const h0=location.hash.slice(1);show(VIEWS.includes(h0)?h0:LS.get('ck-view','signal'));
+/* size each embedded page to its content so the whole cockpit scrolls as one page */
+setInterval(()=>{['f-flow','f-sankaku'].forEach(id=>{const f=$(id);if(!f.src||f.closest('section').hidden)return;
+  try{const d=f.contentDocument;const h=d&&d.documentElement?Math.max(d.documentElement.scrollHeight,d.body?d.body.scrollHeight:0):0;if(h>200&&Math.abs(h-f.offsetHeight)>4)f.style.height=h+'px'}catch(e){}})},800);
+if(/github\.io$/.test(location.hostname))$('golive').hidden=true;
+
+/* ---------- exchange state ---------- */
+const EX={
+  binance:{name:'Binance',col:tok('--x-binance'),frH:8},
+  bybit:{name:'Bybit',col:tok('--x-bybit'),frH:8},
+  okx:{name:'OKX',col:tok('--x-okx'),frH:8},
+  bitget:{name:'Bitget',col:tok('--x-bitget'),frH:8},
+  hyper:{name:'Hyperliquid',col:tok('--x-hyper'),frH:1},
+  deribit:{name:'Deribit',col:tok('--x-deribit'),frH:8},
+  edgex:{name:'edgeX',col:tok('--x-edgex'),frH:null}
+};
+const LIQ_EX=['binance','bybit','okx'];
+for(const k in EX)Object.assign(EX[k],{st:'wait',last:0,fr:null,next:null,oi:null,oi0:null,px:null,oiH:[],frH8:[],L:0,S:0,n:0,max:0});
+const BUCK={};const BIG=[];
+const fr8=e=>e.fr==null||!e.frH?null:e.fr*8/e.frH;
+const pxRef=()=>EX.binance.px||EX.bybit.px||EX.okx.px||EX.bitget.px||EX.hyper.px||EX.deribit.px||86000;
+function seen(k){const e=EX[k];e.st='on';e.last=Date.now();if(MODE!=='LIVE'&&MODE!=='DEMO')setMode('LIVE');else if(MODE==='DEMO'&&!demoLock)goLive()}
+function setOI(k,btc){const e=EX[k];if(!(btc>0))return;e.oi=btc;if(e.oi0==null)e.oi0=btc}
+function addLiq(k,longLiq,u,px,t){
+  if(!(u>0))return;const e=EX[k];if(longLiq)e.L+=u;else e.S+=u;e.n++;e.max=Math.max(e.max,u);
+  const m=Math.floor((t||Date.now())/60e3);const b=BUCK[m]||(BUCK[m]={});const x=b[k]||(b[k]={L:0,S:0});if(longLiq)x.L+=u;else x.S+=u;
+  if(u>=100000){BIG.unshift({k,longLiq,u,px,t:t||Date.now()});if(BIG.length>40)BIG.pop();renderBig()}
+}
+
+/* ---------- websockets ---------- */
+function feedWS(k,urls,onopen,onmsg,ping){
+  urls=[].concat(urls);let delay=3000,ui=0;
+  const go=()=>{
+    let s,pt=null,wd=null,last=Date.now(),got=false;const url=urls[ui%urls.length];
+    const retry=()=>{ui++;setTimeout(go,delay=Math.min(delay*2,60000))};
+    try{s=new WebSocket(url)}catch(e){if(EX[k])EX[k].st='off';return retry()}
+    s.onopen=()=>{delay=3000;try{onopen(s)}catch(e){}if(ping)pt=setInterval(()=>{try{ping(s)}catch(e){}},20000);
+      wd=setInterval(()=>{if(Date.now()-last>30000){try{s.close()}catch(e){}}},5000)};
+    s.onmessage=e=>{last=Date.now();got=true;try{onmsg(s,e.data)}catch(err){}};
+    s.onerror=()=>{};
+    s.onclose=()=>{clearInterval(pt);clearInterval(wd);if(EX[k])EX[k].st='off';if(got)ui--;retry()};
+  };go();
+}
+const live=()=>MODE!=='DEMO';
+/* Binance USDⓈ-M: mark/funding + liquidations (OI by REST) */
+const BNS='streams=btcusdt@markPrice@1s/btcusdt@forceOrder/btcusdt@aggTrade';
+feedWS('binance',['wss://fstream.binance.com/market/stream?'+BNS,'wss://fstream.binance.com/stream?'+BNS],()=>{},(s,raw)=>{
+  const d=JSON.parse(raw).data;if(!d||!live())return;
+  if(d.e==='markPriceUpdate'){const e=EX.binance;e.fr=+d.r;e.next=+d.T;e.px=+d.p;e.idx=+d.i;seen('binance')}
+  else if(d.e==='aggTrade'){onTrade('perp',+d.q,!d.m,+d.p,+d.T)}
+  else if(d.e==='forceOrder'){const o=d.o;const px=+(o.ap||o.p);addLiq('binance',o.S==='SELL',px*+(o.z||o.q),px,+o.T)}
+});
+async function pollBinanceOI(){if(!live())return;try{const r=await fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT');if(!r.ok)throw 0;const j=await r.json();setOI('binance',+j.openInterest)}catch(e){}}
+pollBinanceOI();setInterval(pollBinanceOI,10000);
+/* Bybit linear */
+const BY={};
+feedWS('bybit','wss://stream.bybit.com/v5/public/linear',s=>s.send(JSON.stringify({op:'subscribe',args:['tickers.BTCUSDT','allLiquidation.BTCUSDT','orderbook.200.BTCUSDT','publicTrade.BTCUSDT']})),(s,raw)=>{
+  const m=JSON.parse(raw);if(!m.topic||!live())return;
+  if(m.topic.startsWith('orderbook')){const d=m.data||{};bookSet('bybit',d.b,d.a,m.type==='snapshot');return}
+  if(m.topic.startsWith('publicTrade')){(m.data||[]).forEach(x=>onTrade('perp',+x.v,x.S==='Buy',+x.p,+x.T));return}
+  if(m.topic==='tickers.BTCUSDT'){Object.assign(BY,m.data);const e=EX.bybit;
+    if(BY.fundingRate!=null&&BY.fundingRate!=='')e.fr=+BY.fundingRate;if(BY.nextFundingTime)e.next=+BY.nextFundingTime;if(BY.fundingIntervalHour)e.frH=+BY.fundingIntervalHour;
+    if(BY.markPrice)e.px=+BY.markPrice;setOI('bybit',+BY.openInterest);seen('bybit')}
+  else (m.data||[]).forEach(l=>addLiq('bybit',l.S==='Buy',(+l.v)*(+l.p),+l.p,+l.T));
+},s=>s.send(JSON.stringify({op:'ping'})));
+/* OKX */
+feedWS('okx','wss://ws.okx.com:8443/ws/v5/public',s=>s.send(JSON.stringify({op:'subscribe',args:[{channel:'open-interest',instId:'BTC-USDT-SWAP'},{channel:'funding-rate',instId:'BTC-USDT-SWAP'},{channel:'mark-price',instId:'BTC-USDT-SWAP'},{channel:'liquidation-orders',instType:'SWAP'},{channel:'books',instId:'BTC-USDT-SWAP'}]})),(s,raw)=>{
+  if(raw==='pong'||!live())return;const m=JSON.parse(raw);if(!m.data||!m.arg)return;const ch=m.arg.channel,e=EX.okx;
+  if(ch==='books'){const d=m.data[0];bookSet('okx',d.bids,d.asks,m.action==='snapshot',0.01);return}
+  if(ch==='open-interest'){const d=m.data[0];setOI('okx',+d.oiCcy);seen('okx')}
+  else if(ch==='funding-rate'){const d=m.data[0];e.fr=+d.fundingRate;e.next=+d.fundingTime;if(+d.nextFundingTime&&+d.fundingTime)e.frH=Math.round((+d.nextFundingTime-+d.fundingTime)/36e5)||8;seen('okx')}
+  else if(ch==='mark-price'){e.px=+m.data[0].markPx}
+  else if(ch==='liquidation-orders')m.data.forEach(it=>{if(it.instId!=='BTC-USDT-SWAP'&&it.instId!=='BTC-USD-SWAP')return;
+    (it.details||[]).forEach(x=>{const px=+x.bkPx,sz=+x.sz;const u=it.instId==='BTC-USD-SWAP'?sz*100:sz*0.01*px;addLiq('okx',x.posSide==='long'||(x.posSide!=='short'&&x.side==='sell'),u,px,+x.ts)})});
+},s=>s.send('ping'));
+/* Bitget USDT-futures */
+feedWS('bitget','wss://ws.bitget.com/v2/ws/public',s=>s.send(JSON.stringify({op:'subscribe',args:[{instType:'USDT-FUTURES',channel:'ticker',instId:'BTCUSDT'},{instType:'USDT-FUTURES',channel:'books15',instId:'BTCUSDT'}]})),(s,raw)=>{
+  if(raw==='pong'||!live())return;const m=JSON.parse(raw);if(!m.data||!m.data[0])return;const d=m.data[0],e=EX.bitget;
+  if(m.arg&&m.arg.channel==='books15'){bookSet('bitget',d.bids,d.asks,true);return}
+  if(d.fundingRate!=null)e.fr=+d.fundingRate;if(d.nextFundingTime)e.next=+d.nextFundingTime;if(d.markPrice)e.px=+d.markPrice;setOI('bitget',+d.holdingAmount);seen('bitget');
+},s=>s.send('ping'));
+/* Hyperliquid (hourly funding) */
+feedWS('hyper','wss://api.hyperliquid.xyz/ws',s=>{s.send(JSON.stringify({method:'subscribe',subscription:{type:'activeAssetCtx',coin:'BTC'}}));s.send(JSON.stringify({method:'subscribe',subscription:{type:'l2Book',coin:'BTC',nSigFigs:4}}))},(s,raw)=>{
+  const m=JSON.parse(raw);if(m.channel==='l2Book'&&live()){const lv=m.data&&m.data.levels;if(lv)bookSet('hyper',lv[0],lv[1],true);return}if(m.channel!=='activeAssetCtx'||!live())return;const c=m.data&&m.data.ctx;if(!c)return;const e=EX.hyper;
+  e.fr=+c.funding;e.px=+c.markPx;const n=new Date();n.setUTCMinutes(0,0,0);e.next=n.getTime()+36e5;setOI('hyper',+c.openInterest);seen('hyper');
+},s=>s.send(JSON.stringify({method:'ping'})));
+/* Deribit perpetual (OI in USD, funding_8h) */
+feedWS('deribit','wss://www.deribit.com/ws/api/v2',s=>s.send(JSON.stringify({jsonrpc:'2.0',id:1,method:'public/subscribe',params:{channels:['ticker.BTC-PERPETUAL.100ms']}})),(s,raw)=>{
+  const m=JSON.parse(raw);const d=m.params&&m.params.data;if(!d||!live())return;const e=EX.deribit;
+  if(d.funding_8h!=null)e.fr=+d.funding_8h;e.frH=8;e.px=+d.mark_price;if(d.open_interest&&e.px)setOI('deribit',d.open_interest/e.px);seen('deribit');
+},s=>s.send(JSON.stringify({jsonrpc:'2.0',id:9,method:'public/test',params:{}})));
+/* edgeX (BTCUSD perp = contract 10000001) */
+feedWS('edgex',['wss://quote.edgex.exchange/api/v1/public/ws','wss://edgex-quote-prod-v2.edgex.exchange/api/v1/public/ws'],s=>{s.send(JSON.stringify({type:'subscribe',channel:'ticker.10000001'}));s.send(JSON.stringify({type:'subscribe',channel:'fundingRate.10000001'}));s.send(JSON.stringify({type:'subscribe',channel:'depth.10000001.200'}))},(s,raw)=>{
+  const m=JSON.parse(raw);if(m.type==='ping'){s.send(JSON.stringify({type:'pong',time:m.time}));return}
+  if(m.type!=='quote-event'||!m.content||!live())return;const ch=m.channel||m.content.channel||'';const d=(m.content.data||[])[0];if(!d)return;const e=EX.edgex;
+  if(ch.startsWith('depth')){const snap=String(m.content.dataType||'').toLowerCase()==='snapshot'||String(d.depthType||'').toUpperCase()==='SNAPSHOT';bookSet('edgex',d.bids,d.asks,snap);return}
+  if(ch.startsWith('ticker')){if(d.fundingRate!=null)e.fr=+d.fundingRate;e.px=+(d.markPrice||d.price)||e.px;const oi=+d.openInterest;if(oi)setOI('edgex',oi<1e6?oi:oi/(e.px||pxRef()));seen('edgex')}
+  else if(ch.startsWith('fundingRate')){if(d.fundingRate!=null)e.fr=+d.fundingRate;const nx=+(d.nextFundingTime||0),ft=+(d.fundingTime||d.fundingTimestamp||0);if(nx)e.next=nx;if(nx&&ft&&nx>ft)e.frH=Math.round((nx-ft)/36e5)||e.frH;seen('edgex')}
+});
+
+/* ---------- demo (when nothing is reachable) ---------- */
+let demoT=null,demoLock=false;
+function startDemo(){
+  if(MODE==='LIVE')return;setMode('DEMO');demoLock=true;setTimeout(()=>{demoLock=false},4000);
+  const base={binance:[95000,.00008],bybit:[57900,.00006],okx:[24000,.00005],bitget:[42000,.00009],hyper:[31000,.0000105],deribit:[11000,.00004],edgex:[2300,.00007]};
+  for(const k in base){const e=EX[k];e.oi=e.oi0=base[k][0];e.fr=base[k][1];e.px=86000;e.st='demo';e.next=Date.now()+(2+Math.random()*5)*36e5;if(k==='edgex')e.frH=4}
+  /* backfill ~10 minutes so charts have a shape */
+  const t=Date.now();for(let i=60;i>=1;i--){const tt=t-i*10e3;for(const k in EX){const e=EX[k];e.oiH.push({t:tt,v:e.oi*(1+(Math.random()-.5)*.002-i*.00004)});e.frH8.push({t:tt,v:fr8(e)*(1+(Math.random()-.5)*.3)})}}
+  for(let i=45;i>=1;i--){const m=Math.floor((t-i*60e3)/60e3);BUCK[m]={};LIQ_EX.forEach(k=>{if(Math.random()<.6)BUCK[m][k]={L:Math.random()<.5?Math.random()*4e5:0,S:Math.random()<.4?Math.random()*3e5:0}})}
+  demoT=setInterval(()=>{const tt=Date.now();for(const k in EX){const e=EX[k];e.oi*=1+(Math.random()-.5)*.0006;e.fr+=(Math.random()-.5)*e.fr*.02;e.px=86000+Math.sin(tt/60000)*120}
+    if(Math.random()<.25){const k=LIQ_EX[Math.floor(Math.random()*3)];addLiq(k,Math.random()<.6,Math.exp(9+Math.random()*4.5),86000,tt)}},1000);
+}
+function goLive(){if(demoT){resetSignal();clearInterval(demoT);demoT=null;for(const k in EX)Object.assign(EX[k],{oi:null,oi0:null,fr:null,oiH:[],frH8:[],L:0,S:0,n:0,max:0});for(const m in BUCK)delete BUCK[m];BIG.length=0;$('lqlist').innerHTML='<p class="note">$100k以上の清算がここに流れます。</p>'}setMode('LIVE')}
+setTimeout(()=>{if(MODE!=='LIVE')startDemo()},8000);
+function setMode(m){MODE=m;const el=$('mode');
+  if(m==='LIVE'){el.textContent='LIVE';el.className='pill up';$('modenote').textContent='7取引所に直接つないでいます。OIの「開いてから」と清算の累計は、このページを開いた時点からの数字です。'}
+  else if(m==='DEMO'){el.textContent='DEMO';el.className='pill gold';$('modenote').textContent='取引所に接続できないため、デモデータで表示中です（実際の相場ではありません）。Claudeのアーティファクト内では外部接続がブロックされます。「ライブ版を開く」から本物の相場で動きます。'}}
+
+/* ---------- sampling ---------- */
+setInterval(()=>{if(MODE==='WAIT')return;const t=Date.now();for(const k in EX){const e=EX[k];
+  if(e.oi){e.oiH.push({t,v:e.oi});if(e.oiH.length>720)e.oiH.shift()}
+  const v=fr8(e);if(v!=null){e.frH8.push({t,v});if(e.frH8.length>720)e.frH8.shift()}}
+  const cut=Math.floor(t/60e3)-90;for(const m in BUCK)if(+m<cut)delete BUCK[m];
+},10000);
+
+/* ---------- canvas helpers ---------- */
+function fit(cv){const r=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w)return null;if(cv.width!==Math.round(w*r)||cv.height!==Math.round(h*r)){cv.width=Math.round(w*r);cv.height=Math.round(h*r)}const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);x.clearRect(0,0,w,h);return [x,w,h]}
+function waitMsg(x,w,h,msg){x.fillStyle=C.dim;x.font='10px "IBM Plex Mono",monospace';x.textAlign='center';x.fillText(msg,w/2,h/2);x.textAlign='left'}
+function lines(cvId,series,fmt){
+  const F=fit($(cvId));if(!F)return;const [x,w,h]=F;
+  const S=series.filter(s=>s.pts.length>1);if(!S.length)return waitMsg(x,w,h,'10秒ごとに記録中…');
+  let lo=Infinity,hi=-Infinity,t0=Infinity,t1=-Infinity;S.forEach(s=>s.pts.forEach(p=>{lo=Math.min(lo,p.v);hi=Math.max(hi,p.v);t0=Math.min(t0,p.t);t1=Math.max(t1,p.t)}));
+  lo=Math.min(lo,0);hi=Math.max(hi,0);const pd=(hi-lo)*.12||Math.abs(hi)*.1||1e-6;lo-=pd;hi+=pd;const padR=58;
+  const X=t=>(t-t0)/Math.max(1,t1-t0)*(w-padR),Y=v=>(hi-v)/(hi-lo)*(h-14)+2;
+  x.strokeStyle=C.line;x.lineWidth=1;x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';
+  for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3,y=Y(v);x.globalAlpha=.5;x.beginPath();x.moveTo(0,y);x.lineTo(w-padR,y);x.stroke();x.globalAlpha=1;x.fillText(fmt(v),w-padR+4,y+3)}
+  x.strokeStyle=C.dim;x.beginPath();x.moveTo(0,Y(0));x.lineTo(w-padR,Y(0));x.stroke();
+  S.forEach(s=>{x.strokeStyle=s.col;x.lineWidth=1.6;x.beginPath();s.pts.forEach((p,i)=>i?x.lineTo(X(p.t),Y(p.v)):x.moveTo(X(p.t),Y(p.v)));x.stroke();
+    const L=s.pts[s.pts.length-1];x.fillStyle=s.col;x.beginPath();x.arc(X(L.t),Y(L.v),2.5,0,7);x.fill()});
+  x.fillStyle=C.dim;x.fillText(jst(t0),0,h-2);x.textAlign='right';x.fillText('now',w-padR,h-2);x.textAlign='left';
+}
+
+/* ---------- renderers ---------- */
+const exCell=k=>`<span class="ex"><i style="background:${EX[k].col}"></i>${EX[k].name}</span>`;
+function renderChips(){
+  $('chips').innerHTML=Object.keys(EX).map(k=>{const e=EX[k];const st=MODE==='DEMO'?'wait':e.st==='on'&&Date.now()-e.last<60e3?'on':e.st==='off'?'off':'wait';
+    return `<span class="chip ${st}">${e.name}${MODE==='DEMO'?' DEMO':''}</span>`}).join('');
+}
+function renderFR(){
+  const rows=Object.keys(EX).map(k=>({k,e:EX[k],v:fr8(EX[k])})).sort((a,b)=>(b.v??-9)-(a.v??-9));
+  $('frbody').innerHTML=rows.map(({k,e,v})=>{
+    const raw=e.fr==null?'—':sg(e.fr*100,4)+'%';const iv=e.frH?e.frH+'h':'不明';
+    const p=v==null?null:Math.max(-50,Math.min(50,v*100/0.05*50));
+    const bar=p==null?'':`<b style="${p>=0?'left:50%':'left:'+(50+p)+'%'};width:${Math.abs(p)}%;background:${p>=0?C.buy:C.sell}"></b>`;
+    return `<tr><td>${exCell(k)}</td><td>${raw}</td><td class="dim">${iv}</td><td class="${v==null?'dim':v>=0?'up':'dn'}">${v==null?'—':sg(v*100,4)+'%'}</td><td>${v==null?'—':sg(v*3*365*100,1)+'%'}</td><td class="dim">${cd(e.next)}</td><td><div class="dbar">${bar}</div></td></tr>`}).join('');
+  lines('cv-fr',Object.keys(EX).map(k=>({col:EX[k].col,pts:EX[k].frH8.map(p=>({t:p.t,v:p.v*100}))})),v=>sg(v,4)+'%');
+}
+function renderOI(){
+  const px=pxRef(),ks=Object.keys(EX).filter(k=>EX[k].oi);const tot=ks.reduce((a,k)=>a+EX[k].oi,0);
+  $('oitot').textContent=tot?`合計 ${f0(tot)} BTC · ${usd(tot*px)}`:'—';
+  $('oishare').innerHTML=ks.sort((a,b)=>EX[b].oi-EX[a].oi).map(k=>`<i title="${EX[k].name}" style="width:${(EX[k].oi/tot*100).toFixed(2)}%;background:${EX[k].col}"></i>`).join('');
+  const t=Date.now();
+  $('oibody').innerHTML=Object.keys(EX).sort((a,b)=>(EX[b].oi||0)-(EX[a].oi||0)).map(k=>{const e=EX[k];if(!e.oi)return `<tr><td>${exCell(k)}</td><td colspan="5" class="dim">接続待ち</td></tr>`;
+    const d0=e.oi-e.oi0;let d5=null;if(e.oiH.length>1){let r=e.oiH[0];for(const p of e.oiH){if(p.t<=t-300e3)r=p;else break}d5=(e.oi/r.v-1)*100}
+    return `<tr><td>${exCell(k)}</td><td>${f0(e.oi)}</td><td>${usd(e.oi*(e.px||px))}</td><td>${(e.oi/tot*100).toFixed(1)}%</td><td class="${d0>=0?'up':'dn'}">${sg(d0,1)} ₿</td><td class="${d5==null?'dim':d5>=0?'up':'dn'}">${d5==null?'—':sg(d5,2)+'%'}</td></tr>`}).join('');
+  lines('cv-oi',Object.keys(EX).map(k=>{const e=EX[k];const b=e.oiH.length?e.oiH[0].v:0;return {col:e.col,pts:b?e.oiH.map(p=>({t:p.t,v:(p.v/b-1)*100})):[]}}),v=>sg(v,2)+'%');
+  /* summary tiles */
+  if(tot){const d0=ks.reduce((a,k)=>a+(EX[k].oi-EX[k].oi0),0);$('t-oi').textContent=f0(tot)+' ₿';$('t-oi').className=d0>=0?'up':'dn';$('t-oi2').textContent=`${usd(tot*px)} · 開いてから ${sg(d0,1)} ₿`}
+  let wsum=0,wv=0,mx=null,mn=null;Object.keys(EX).forEach(k=>{const e=EX[k],v=fr8(e);if(v==null)return;if(e.oi){wsum+=e.oi;wv+=v*e.oi}if(!mx||v>mx.v)mx={k,v};if(!mn||v<mn.v)mn={k,v}});
+  if(wsum){const w=wv/wsum;$('t-fr').textContent=sg(w*100,4)+'%';$('t-fr').className=w>=0?'up':'dn';$('t-fr2').textContent=`年率 ${sg(w*3*365*100,1)}% · OIで加重`}
+  if(mx&&mn){const sp=(mx.v-mn.v)*1e4;$('t-sp').textContent=sp.toFixed(2)+' bps';$('t-sp').className=sp>=1?'gold':'';$('t-sp2').textContent=`高 ${EX[mx.k].name} ${sg(mx.v*100,4)}% / 低 ${EX[mn.k].name} ${sg(mn.v*100,4)}%`}
+}
+function renderLiq(){
+  const F=fit($('cv-lq'));if(!F)return;const [x,w,h]=F;const nowM=Math.floor(Date.now()/60e3),N=60;
+  let mL=0,mS=0,sL=0,sS=0;
+  for(let i=0;i<N;i++){const b=BUCK[nowM-N+1+i]||{};let L=0,S=0;LIQ_EX.forEach(k=>{if(b[k]){L+=b[k].L;S+=b[k].S}});mL=Math.max(mL,L);mS=Math.max(mS,S);sL+=L;sS+=S}
+  const mx=Math.max(mL,mS,1e5),padR=54,mid=h/2,bw=(w-padR)/N,sc=(mid-12)/mx;
+  x.strokeStyle=C.line;x.beginPath();x.moveTo(0,mid);x.lineTo(w-padR,mid);x.stroke();
+  for(let i=0;i<N;i++){const b=BUCK[nowM-N+1+i]||{};let yu=mid,yd=mid;
+    LIQ_EX.forEach(k=>{const v=b[k];if(!v)return;x.fillStyle=EX[k].col;const hu=v.L*sc,hd=v.S*sc;if(hu){x.fillRect(i*bw+1,yu-hu,Math.max(1,bw-2),hu);yu-=hu}if(hd){x.fillRect(i*bw+1,yd,Math.max(1,bw-2),hd);yd+=hd}})}
+  x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';x.fillText('▲ ロング清算',2,10);x.fillText('▼ ショート清算',2,h-3);
+  x.fillText(usd(mx),w-padR+4,12);x.fillText('0',w-padR+4,mid+3);x.fillText(usd(mx),w-padR+4,h-3);
+  x.fillText('-60分',2,mid+12);x.textAlign='right';x.fillText('now',w-padR-2,mid+12);x.textAlign='left';
+  $('t-lq').innerHTML=`<span style="color:var(--liqL)">${usd(sL)}</span> / <span style="color:var(--liqS)">${usd(sS)}</span>`;
+  $('t-lq2').textContent=`ロング / ショート · ${sL+sS?(sL/(sL+sS)*100).toFixed(0)+'%がロング':'清算なし'}`;
+  $('lqbody').innerHTML=LIQ_EX.map(k=>{const e=EX[k];return `<tr><td>${exCell(k)}</td><td style="color:var(--liqL)">${usd(e.L)}</td><td style="color:var(--liqS)">${usd(e.S)}</td><td>${e.n}</td><td>${e.max?usd(e.max):'—'}</td></tr>`}).join('');
+}
+function renderBig(){
+  if(!BIG.length)return;
+  $('lqlist').innerHTML=BIG.map(b=>`<div class="lq" style="border-left-color:${EX[b.k].col}"><span class="dim">${jst(b.t,true)}</span><span>${EX[b.k].name} <b style="color:${b.longLiq?'var(--liqL)':'var(--liqS)'}">${b.longLiq?'ロング清算':'ショート清算'}</b> @${b.px?f1(b.px):'—'}</span><b>${usd(b.u)}</b></div>`).join('');
+}
+$('lqlegend').innerHTML=LIQ_EX.map(k=>`<span><i style="background:${EX[k].col}"></i>${EX[k].name}</span>`).join('');
+setInterval(()=>{renderChips();if($('v-compare').hidden)return;renderFR();renderOI();renderLiq()},1000);
+setInterval(()=>{$('clock').textContent=jst(Date.now(),true)+' JST'},1000);
+
+/* ================= 板（オーダーブック） ================= */
+const BOOK_EX=['binance','bybit','okx','bitget','hyper','edgex'];
+const BOOK={};
+function bookOf(k){return BOOK[k]||(BOOK[k]={b:new Map(),a:new Map(),t:0})}
+function bookSet(k,bids,asks,snap,mult){
+  mult=mult||1;const B=bookOf(k);if(snap){B.b.clear();B.a.clear()}
+  const lv=x=>Array.isArray(x)?[+x[0],+x[1]]:[+(x.px??x.price),+(x.sz??x.size)];
+  for(const x of bids||[]){const [p,q]=lv(x);if(!(p>0))continue;q>0?B.b.set(p,q*mult):B.b.delete(p)}
+  for(const x of asks||[]){const [p,q]=lv(x);if(!(p>0))continue;q>0?B.a.set(p,q*mult):B.a.delete(p)}
+  B.t=Date.now();
+}
+function bookStats(k){
+  const B=BOOK[k];if(!B||!B.b.size||!B.a.size||Date.now()-B.t>30e3)return null;
+  let bb=-Infinity,ba=Infinity;for(const p of B.b.keys())if(p>bb)bb=p;for(const p of B.a.keys())if(p<ba)ba=p;
+  if(!(ba>bb)){/* crossed after missed delta: trim and retry next tick */for(const p of [...B.b.keys()])if(p>=ba)B.b.delete(p);return null}
+  const mid=(bb+ba)/2;let b5=0,a5=0,b10=0,a10=0;
+  for(const [p,q] of B.b){const d=(mid-p)/mid;if(d<=.01){b10+=p*q;if(d<=.005)b5+=p*q}}
+  for(const [p,q] of B.a){const d=(p-mid)/mid;if(d<=.01){a10+=p*q;if(d<=.005)a5+=p*q}}
+  return {mid,bb,ba,spread:ba-bb,b5,a5,b10,a10,imb:b5+a5?(b5-a5)/(b5+a5):0};
+}
+async function pollBinanceBook(){
+  if(!live())return;
+  try{const r=await fetch('https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=1000');if(!r.ok)throw 0;const j=await r.json();bookSet('binance',j.bids,j.asks,true)}catch(e){}
+}
+pollBinanceBook();setInterval(pollBinanceBook,5000);
+
+/* ================= テイカーフロー・1分足 ================= */
+const FLOW={perp:[],spot:[]};const KL=[];let CB=null,bnOIHist=[],booted=false;
+function onTrade(kind,q,isBuy,p,t){
+  if(!(q>0))return;t=t||Date.now();FLOW[kind].push({t,q:isBuy?q:-q});
+  if(kind==='perp'&&p>0){const m=Math.floor(t/60e3)*60e3;let L=KL[KL.length-1];
+    if(!L||m>L.t){KL.push({t:m,o:p,h:p,l:p,c:p,v:q});if(KL.length>400)KL.shift()}
+    else if(m===L.t){L.h=Math.max(L.h,p);L.l=Math.min(L.l,p);L.c=p;L.v+=q}}
+}
+feedWS('bnspot',['wss://stream.binance.com:9443/ws/btcusdt@aggTrade','wss://stream.binance.com/ws/btcusdt@aggTrade'],()=>{},(s,raw)=>{const d=JSON.parse(raw);if(d.e!=='aggTrade'||!live())return;onTrade('spot',+d.q,!d.m,+d.p,+d.T);SRC2.bnspot=Date.now()});
+feedWS('coinbase','wss://ws-feed.exchange.coinbase.com',s=>s.send(JSON.stringify({type:'subscribe',product_ids:['BTC-USD'],channels:['matches']})),(s,raw)=>{
+  const m=JSON.parse(raw);if(m.type!=='match'||!live())return;CB=+m.price;onTrade('spot',+m.size,m.side==='sell',+m.price,Date.parse(m.time));SRC2.coinbase=Date.now()});
+const SRC2={};
+async function bootstrap(){
+  if(booted||!live())return;booted=true;
+  try{const r=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1m&limit=240');const j=await r.json();
+    if(Array.isArray(j)){const cur=KL.splice(0);j.forEach(k=>KL.push({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+      cur.forEach(c=>{const L=KL[KL.length-1];if(c.t>L.t)KL.push(c);else if(c.t===L.t){L.h=Math.max(L.h,c.h);L.l=Math.min(L.l,c.l);L.c=c.c}})}}catch(e){booted=false}
+  try{const r=await fetch('https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=5m&limit=12');const j=await r.json();if(Array.isArray(j))bnOIHist=j.map(x=>({t:+x.timestamp,v:+x.sumOpenInterest}))}catch(e){}
+}
+setInterval(()=>{if(MODE==='LIVE')bootstrap()},3000);
+
+/* ================= 総評エンジン ================= */
+const W={T:20,F:20,B:15,O:15,R:10,L:10,P:10};
+const FN={T:['トレンド','EMA9/21とVWAPの位置'],F:['テイカーフロー','先物＋現物の成行の偏り（5分）'],B:['板','7取引所の±0.5%の厚み'],O:['建玉×価格','15分の価格とOIの組み合わせ'],R:['資金調達率','OI加重・逆張りで評価'],L:['清算','15分のロング/ショート清算'],P:['Coinbaseプレミアム','米国現物の買い圧']};
+const tanh=Math.tanh,clamp1=v=>Math.max(-1,Math.min(1,v));
+const ema=(a,n)=>{const k=2/(n+1);let e=a[0];for(let i=1;i<a.length;i++)e=a[i]*k+e*(1-k);return e};
+function frW(){let ws=0,wv=0;for(const k in EX){const e=EX[k],v=fr8(e);if(v!=null&&e.oi){ws+=e.oi;wv+=v*e.oi}}return ws?wv/ws:null}
+function oiTotalAt(t){let s=0,n=0;for(const k in EX){const H=EX[k].oiH;if(H.length<2||H[0].t>t)continue;let r=H[0];for(const p of H){if(p.t<=t)r=p;else break}s+=r.v;n++}return n?{s,n}:null}
+function factors(){
+  const t=Date.now(),F={};
+  /* T: trend */
+  if(KL.length>=30){const cl=KL.slice(-90).map(k=>k.c);const e9=ema(cl,9),e21=ema(cl,21);
+    const atr=Math.max(1,KL.slice(-14).reduce((a,k)=>a+(k.h-k.l),0)/14);
+    const L60=KL.slice(-60);const vw=L60.reduce((a,k)=>a+k.c*(k.v||1),0)/L60.reduce((a,k)=>a+(k.v||1),0);const px=cl[cl.length-1];
+    const v=tanh((e9-e21)/atr*.8+(px-vw)/(atr*3));
+    F.T={v,px,atr,txt:`EMA9${e9>=e21?'>':'<'}21・VWAP比 ${sg((px/vw-1)*100,2)}%`,why:v>0?'短期トレンドが上向き（EMAとVWAPの上）':'短期トレンドが下向き（EMAとVWAPの下）'}}
+  /* F: taker flow */
+  for(const k of ['perp','spot'])while(FLOW[k].length&&t-FLOW[k][0].t>1800e3)FLOW[k].shift();
+  const win=(k,a,b)=>{let s=0,c=0;for(const x of FLOW[k])if(x.t>=a&&x.t<b){s+=x.q;c++}return c?s:null};
+  const norm=k=>{let tot=0,n=0;for(let w=1;w<6;w++){const s=win(k,t-(w+1)*300e3,t-w*300e3);if(s!=null){tot+=Math.abs(s);n++}}return n?tot/n:null};
+  const p5=win('perp',t-300e3,t+1),s5=win('spot',t-300e3,t+1);
+  if(p5!=null||s5!=null){const np=norm('perp')||Math.abs(p5||0)||1,ns=norm('spot')||Math.abs(s5||0)||1;
+    const v=tanh(.6*(p5||0)/np+.8*(s5||0)/ns);
+    const lead=p5!=null&&s5!=null?(Math.sign(p5)!==Math.sign(s5)?'先物と現物が逆向き':Math.abs(s5/ns)>Math.abs(p5/np)?'現物主導':'先物主導'):'';
+    F.F={v,txt:`先物 ${sg(p5||0,1)}₿ / 現物 ${sg(s5||0,1)}₿・${lead}`,why:v>0?`テイカーの買いが優勢（${lead}）`:`テイカーの売りが優勢（${lead}）`,p5,s5}}
+  /* B: orderbook */
+  let b5=0,a5=0,nb=0;BOOK_EX.forEach(k=>{const s=bookStats(k);if(s){b5+=s.b5;a5+=s.a5;nb++}});
+  if(nb&&b5+a5){const imb=(b5-a5)/(b5+a5);F.B={v:clamp1(imb*2),txt:`買い ${usd(b5)} / 売り ${usd(a5)}（${nb}取引所）`,why:imb>0?`板は買い厚（±0.5%で買いが${(b5/(b5+a5)*100).toFixed(0)}%）`:`板は売り厚（±0.5%で売りが${(a5/(b5+a5)*100).toFixed(0)}%）`}}
+  /* O: OI x price (15m) */
+  if(KL.length>=16){const px=KL[KL.length-1].c,p15=KL[KL.length-16].c,dp=(px/p15-1)*100;let doi=null,src='';
+    const now=oiTotalAt(t),then=oiTotalAt(t-900e3);
+    if(now&&then&&then.n===now.n&&t-T0>900e3){doi=(now.s/then.s-1)*100;src=`${now.n}取引所`}
+    else if(bnOIHist.length>=4){const a=bnOIHist[bnOIHist.length-4].v,b=bnOIHist[bnOIHist.length-1].v;doi=(b/a-1)*100;src='Binance'}
+    if(doi!=null){const mag=Math.min(1,Math.abs(doi)/.4);let v,why;
+      if(dp>=0&&doi>=0){v=mag;why='価格↑×OI↑：新規ロングが積まれている'}
+      else if(dp<0&&doi>=0){v=-mag;why='価格↓×OI↑：新規ショートが積まれている'}
+      else if(dp>=0){v=.4*mag;why='価格↑×OI↓：ショートの買い戻し主導（持続力は弱め）'}
+      else{v=-.4*mag;why='価格↓×OI↓：ロングの投げ（建玉の整理）'}
+      F.O={v,txt:`価格 ${sg(dp,2)}% / OI ${sg(doi,2)}%（${src}）`,why}}}
+  /* R: funding (contrarian) */
+  const fr=frW();if(fr!=null){const v=-tanh((fr-.0001)/.0002);F.R={v,txt:`OI加重 ${sg(fr*100,4)}%（8h）`,why:fr>.0002?'資金調達率が高くロングが過熱（逆張りでマイナス）':fr<0?'資金調達率がマイナスでショート過多（逆張りでプラス）':'資金調達率は平常の範囲'}}
+  /* L: liquidations (15m) */
+  const m0=Math.floor(t/60e3);let lL=0,lS=0;for(let i=0;i<15;i++){const b=BUCK[m0-i];if(!b)continue;for(const k in b){lL+=b[k].L;lS+=b[k].S}}
+  if(LIQ_EX.some(k=>EX[k].st==='on'||MODE==='DEMO')){const v=tanh((lS-lL)/5e6);F.L={v,txt:`ロング ${usd(lL)} / ショート ${usd(lS)}`,why:lS>lL?'直近15分はショート清算が優勢（踏み上げ方向）':lL>lS?'直近15分はロング清算が優勢（投げ方向）':'清算は静か'}}
+  /* P: Coinbase premium */
+  const idx=EX.binance.idx;if(CB&&idx){const bps=(CB/idx-1)*1e4;F.P={v:tanh(bps/4),txt:`${sg(CB-idx,1)}ドル（${sg(bps,1)}bps）`,why:bps>=0?'Coinbaseプレミアムがプラス（米国現物の買い）':'Coinbaseプレミアムがマイナス（米国現物の売り）'}}
+  return F;
+}
+const SIG={log:LS.get('ck-siglog',[]),hist:[],side:0,streak:{d:0,n:0},exitN:0,score:0,F:{},sound:false};
+function saveLog(){if(MODE==='LIVE')LS.set('ck-siglog',SIG.log.filter(x=>!x.demo&&Date.now()-x.t<14*864e5).slice(0,200))}
+let AC=null;
+function beep(up){if(!SIG.sound||!AC)return;let t0=AC.currentTime+.02;for(const f of up?[523,659,784]:[784,659,523]){const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.15,t0+.01);g.gain.exponentialRampToValueAtTime(.0001,t0+.18);o.connect(g).connect(AC.destination);o.start(t0);o.stop(t0+.2);t0+=.16}}
+function evalSignal(){
+  if(MODE==='WAIT')return;
+  const F=factors();let ws=0,sc=0;for(const k in W)if(F[k]){ws+=W[k];sc+=W[k]*F[k].v}
+  const score=ws>=40?Math.round(sc/ws*100):0;SIG.score=score;SIG.F=F;SIG.cov=ws;
+  const t=Date.now(),px=F.T?F.T.px:(KL.length?KL[KL.length-1].c:pxRef());
+  SIG.hist.push({t,v:score,px});if(SIG.hist.length>720)SIG.hist.shift();
+  const okL=score>=45&&(!F.T||F.T.v>=0)&&(!F.F||F.F.v>0),okS=score<=-45&&(!F.T||F.T.v<=0)&&(!F.F||F.F.v<0);
+  const want=okL?1:okS?-1:0;
+  if(want===SIG.streak.d)SIG.streak.n++;else SIG.streak={d:want,n:1};
+  if(want!==0&&want!==SIG.side&&SIG.streak.n>=3){
+    SIG.side=want;SIG.exitN=0;const atr=F.T?F.T.atr:px*.002;const L15=KL.slice(-15);
+    const stop=want>0?Math.min(...L15.map(k=>k.l))-atr*.2:Math.max(...L15.map(k=>k.h))+atr*.2;
+    SIG.log.unshift({t,type:want>0?'LONG':'SHORT',score,price:px,stop,tgt:px+(px-stop)*2,r15:null,r60:null,demo:MODE!=='LIVE'});saveLog();beep(want>0);
+  }else if(SIG.side!==0){if(score*SIG.side<15)SIG.exitN++;else SIG.exitN=0;
+    if(SIG.exitN>=3){SIG.log.unshift({t,type:'EXIT',from:SIG.side>0?'LONG':'SHORT',score,price:px,demo:MODE!=='LIVE'});SIG.side=0;SIG.exitN=0;saveLog()}}
+  /* outcomes */
+  let ch=false;for(const e of SIG.log){if(e.type==='EXIT')continue;const d=e.type==='LONG'?1:-1;const r=(px/e.price-1)*100*d;
+    if(e.r15==null&&t-e.t>=900e3){e.r15=t-e.t<1200e3?r:'lost';ch=true}
+    if(e.r60==null&&t-e.t>=3600e3){e.r60=t-e.t<4200e3?r:'lost';ch=true}}
+  if(ch)saveLog();
+}
+setInterval(evalSignal,10000);setTimeout(evalSignal,2500);
+
+/* ================= 描画：総評タブ ================= */
+function verdict(s){return s>=60?['強いロング優勢','up']:s>=30?['ロング優勢','up']:s>-30?['様子見（拮抗）','dim']:s>-60?['ショート優勢','dn']:['強いショート優勢','dn']}
+function renderSignal(){
+  const s=SIG.score,F=SIG.F,[vt,vc]=verdict(s);
+  $('sg-verdict').textContent=vt;$('sg-verdict').className='verdict '+vc;
+  $('sg-score').textContent=(s>0?'+':'')+s;$('sg-score').className='score '+vc;
+  $('sg-needle').style.left=((s+100)/2)+'%';
+  const side=SIG.side,last=SIG.log.find(x=>x.type!=='EXIT');
+  $('sg-pill').textContent=side>0?'LONG':side<0?'SHORT':'WAIT';$('sg-pill').className='sigpill '+(side>0?'long':side<0?'short':'wait');
+  const str=Math.abs(s)>=75?'強':Math.abs(s)>=60?'中':'弱';
+  $('sg-sub').textContent=side!==0&&last?`${jst(last.t)} に${last.type}（スコア ${last.score}）· 現在の強さ ${str}`:`条件：スコア±45以上・トレンドとフローが同じ向き・30秒継続`;
+  $('sg-px').textContent=KL.length?f1(KL[KL.length-1].c):'—';
+  $('sg-cov').textContent=`判定に使えた材料 ${SIG.cov||0}/100`;
+  if(side!==0&&last){$('sg-plan').innerHTML=`目安ストップ <b>${f1(last.stop)}</b> · 目安ターゲット <b>${f1(last.tgt)}</b>（リスクリワード1:2・自動計算の参考値）`}else $('sg-plan').textContent='ポジションのシグナルが出ると、目安のストップとターゲットをここに表示します。';
+  const ks=Object.keys(W).filter(k=>F[k]).sort((a,b)=>Math.abs(W[b]*F[b].v)-Math.abs(W[a]*F[a].v));
+  $('sg-why').innerHTML=ks.slice(0,3).map(k=>`<li class="${F[k].v>=0?'up':'dn'}"><span>${F[k].v>=0?'＋':'−'}</span>${F[k].why}</li>`).join('')||'<li class="dim">材料を集めています…</li>';
+  $('sg-factors').innerHTML=Object.keys(W).map(k=>{const f=F[k];const p=f?Math.round(W[k]*f.v):null;const w=f?Math.abs(f.v)*50:0;
+    return `<div class="fac"><div><b>${FN[k][0]}</b><span>${FN[k][1]} · 重み${W[k]}</span></div><div class="ftxt">${f?f.txt:'<span class="dim">データ待ち</span>'}</div><div class="dbar wide">${f?`<b style="${f.v>=0?'left:50%':'left:'+(50-w)+'%'};width:${w}%;background:${f.v>=0?C.buy:C.sell}"></b>`:''}</div><div class="fpt ${p==null?'dim':p>=0?'up':'dn'}">${p==null?'—':(p>0?'+':'')+p}</div></div>`}).join('');
+  /* score chart */
+  const Fc=fit($('cv-sig'));if(Fc){const [x,w,h]=Fc;const H=SIG.hist;if(H.length<2)waitMsg(x,w,h,'10秒ごとに記録中…');else{
+    const padR=40,t0=H[0].t,t1=H[H.length-1].t,X=t=>(t-t0)/Math.max(1,t1-t0)*(w-padR),Y=v=>(100-v)/200*(h-14)+2;
+    x.font='9px "IBM Plex Mono",monospace';[100,45,0,-45,-100].forEach(v=>{x.strokeStyle=v===0?C.dim:C.line;x.setLineDash(Math.abs(v)===45?[4,4]:[]);x.beginPath();x.moveTo(0,Y(v));x.lineTo(w-padR,Y(v));x.stroke();x.setLineDash([]);x.fillStyle=C.dim;x.fillText((v>0?'+':'')+v,w-padR+4,Y(v)+3)});
+    const g=x.createLinearGradient(0,Y(100),0,Y(-100));g.addColorStop(0,C.buy+'66');g.addColorStop(.5,C.buy+'00');g.addColorStop(.5,C.sell+'00');g.addColorStop(1,C.sell+'66');
+    x.beginPath();x.moveTo(X(H[0].t),Y(0));H.forEach(p=>x.lineTo(X(p.t),Y(p.v)));x.lineTo(X(t1),Y(0));x.closePath();x.fillStyle=g;x.fill();
+    x.beginPath();H.forEach((p,i)=>i?x.lineTo(X(p.t),Y(p.v)):x.moveTo(X(p.t),Y(p.v)));x.strokeStyle=C.fg;x.lineWidth=1.4;x.stroke();x.lineWidth=1;
+    SIG.log.forEach(e=>{if(e.t<t0)return;const xx=X(e.t);x.fillStyle=e.type==='LONG'?C.buy:e.type==='SHORT'?C.sell:C.dim;x.beginPath();if(e.type==='LONG'){x.moveTo(xx,h-4);x.lineTo(xx-5,h-12);x.lineTo(xx+5,h-12)}else if(e.type==='SHORT'){x.moveTo(xx,4);x.lineTo(xx-5,12);x.lineTo(xx+5,12)}else x.arc(xx,h/2,3,0,7);x.fill()});
+    x.fillStyle=C.dim;x.fillText(jst(t0),0,h-2);}}
+  /* log & stats */
+  const ent=SIG.log.filter(e=>e.type!=='EXIT');
+  const st=key=>{const v=ent.filter(e=>typeof e[key]==='number');if(!v.length)return '—';const wn=v.filter(e=>e[key]>0).length;const avg=v.reduce((a,e)=>a+e[key],0)/v.length;return `<b class="${wn/v.length>=.5?'up':'dn'}">${(wn/v.length*100).toFixed(0)}%</b> <span class="dim">(${wn}/${v.length}) 平均 ${sg(avg,2)}%</span>`};
+  $('sg-stat').innerHTML=`<div>15分後の勝率 ${st('r15')}</div><div>60分後の勝率 ${st('r60')}</div>`;
+  const res=v=>v==null?'<span class="gold">待機</span>':v==='lost'?'<span class="dim">不明</span>':`<span class="${v>0?'up':'dn'}">${sg(v,2)}%</span>`;
+  $('sg-log').innerHTML=SIG.log.slice(0,30).map(e=>e.type==='EXIT'?`<tr><td>${jst(e.t)}</td><td class="dim">EXIT（${e.from}）</td><td>${e.score}</td><td>${f1(e.price)}</td><td colspan="2" class="dim">—</td></tr>`
+    :`<tr><td>${jst(e.t)}</td><td class="${e.type==='LONG'?'up':'dn'}"><b>${e.type}</b>${e.demo?' <span class="dim">DEMO</span>':''}</td><td>${e.score}</td><td>${f1(e.price)}</td><td>${res(e.r15)}</td><td>${res(e.r60)}</td></tr>`).join('')||'<tr><td colspan="6" class="dim">シグナルが出るとここに記録されます（このブラウザに14日保存）。</td></tr>';
+}
+
+/* ================= 描画：板パネル ================= */
+function renderBooks(){
+  const S={};BOOK_EX.forEach(k=>S[k]=bookStats(k));
+  $('bkbody').innerHTML=BOOK_EX.map(k=>{const s=S[k];if(!s)return `<tr><td>${exCell(k)}</td><td colspan="6" class="dim">接続待ち</td></tr>`;
+    return `<tr><td>${exCell(k)}</td><td class="up">${usd(s.b5)}</td><td class="dn">${usd(s.a5)}</td><td class="${s.imb>=0?'up':'dn'}">${sg(s.imb*100,0)}%</td><td>${usd(s.b10)}</td><td>${usd(s.a10)}</td><td class="dim">${k==='hyper'?'集約':s.spread.toFixed(1)}</td></tr>`}).join('');
+  /* aggregated depth by $50 buckets within ±1% */
+  const mids=BOOK_EX.map(k=>S[k]&&S[k].mid).filter(Boolean);const F=fit($('cv-book'));if(!F)return;const [x,w,h]=F;
+  if(!mids.length)return waitMsg(x,w,h,'板データ待ち…');
+  const mid=mids.sort((a,b)=>a-b)[Math.floor(mids.length/2)],step=50,N=Math.ceil(mid*.01/step);
+  const bid=new Array(N).fill(0),ask=new Array(N).fill(0),bidBy=Array.from({length:N},()=>({})),askBy=Array.from({length:N},()=>({}));
+  BOOK_EX.forEach(k=>{const B=BOOK[k];if(!S[k])return;
+    for(const [p,q] of B.b){const i=Math.floor((mid-p)/step);if(i>=0&&i<N){bid[i]+=p*q;bidBy[i][k]=(bidBy[i][k]||0)+p*q}}
+    for(const [p,q] of B.a){const i=Math.floor((p-mid)/step);if(i>=0&&i<N){ask[i]+=p*q;askBy[i][k]=(askBy[i][k]||0)+p*q}}});
+  const mx=Math.max(...bid,...ask,1),cx=w/2,bw=(w/2-4)/N,top=14,ph=h-30;
+  x.font='9px "IBM Plex Mono",monospace';
+  for(let i=0;i<N;i++){const hb=bid[i]/mx*ph,ha=ask[i]/mx*ph;x.fillStyle=C.buy;x.globalAlpha=.85;x.fillRect(cx-(i+1)*bw,top+ph-hb,bw-1,hb);x.fillStyle=C.sell;x.fillRect(cx+i*bw+1,top+ph-ha,bw-1,ha);x.globalAlpha=1}
+  x.strokeStyle=C.dim;x.beginPath();x.moveTo(cx,top);x.lineTo(cx,top+ph);x.stroke();
+  x.fillStyle=C.dim;x.textAlign='center';x.fillText(f0(mid),cx,h-4);x.textAlign='left';x.fillText(f0(mid*.99),0,h-4);x.textAlign='right';x.fillText(f0(mid*1.01),w,h-4);x.textAlign='left';
+  x.fillText('買い板',2,10);x.textAlign='right';x.fillText('売り板',w-2,10);x.textAlign='left';
+  const walls=(arr,by,sideSign)=>arr.map((v,i)=>({v,i,by:by[i]})).sort((a,b)=>b.v-a.v).slice(0,3).map(o=>{const p0=sideSign<0?mid-(o.i+1)*step:mid+o.i*step;const topEx=Object.entries(o.by).sort((a,b)=>b[1]-a[1])[0];
+    return `<div class="wall ${sideSign<0?'up':'dn'}"><b>${f0(p0)}–${f0(p0+step)}</b><span>${usd(o.v)}</span><span class="dim">最大 ${topEx?EX[topEx[0]].name:'—'}</span></div>`}).join('');
+  /* mark whale orders on the depth chart */
+  for(const w of WH.live.values()){const dd=w.side==='bid'?(mid-w.p)/step:(w.p-mid)/step;if(dd<0||dd>=N)continue;const i=Math.floor(dd);
+    const xx=w.side==='bid'?cx-(i+.5)*bw:cx+(i+.5)*bw,hh=(w.side==='bid'?bid[i]:ask[i])/mx*ph,yy=Math.max(24,top+ph-hh-6);
+    x.fillStyle=C.gold;x.beginPath();x.moveTo(xx,yy);x.lineTo(xx-5,yy-7);x.lineTo(xx+5,yy-7);x.closePath();x.fill();
+    x.font='9px "IBM Plex Mono",monospace';x.textAlign='center';x.fillText(Math.round(w.q)+'',xx,yy-10);x.textAlign='left'}
+  $('walls').innerHTML=`<div><div class="ph" style="margin:0 0 4px"><b>買いの壁</b></div>${walls(bid,bidBy,-1)}</div><div><div class="ph" style="margin:0 0 4px"><b>売りの壁</b></div>${walls(ask,askBy,1)}</div>`;
+}
+
+/* ================= デモ補助 ================= */
+setInterval(()=>{if(MODE!=='DEMO')return;const t=Date.now();const base=86000+Math.sin(t/90000)*250+Math.sin(t/23000)*60;
+  if(KL.length<30){KL.length=0;for(let i=200;i>=1;i--){const c=86000+Math.sin((t-i*60e3)/90000)*250+(Math.random()-.5)*40;KL.push({t:Math.floor((t-i*60e3)/60e3)*60e3,o:c,h:c+15,l:c-15,c,v:50+Math.random()*80})}}
+  const bias=Math.cos(t/90000);for(let i=0;i<25;i++)onTrade(Math.random()<.5?'perp':'spot',Math.random()*.8,Math.random()<.5+bias*.25,base+(Math.random()-.5)*8,t);
+  BOOK_EX.forEach((k,j)=>{const bids=[],asks=[];for(let i=0;i<120;i++){bids.push([base-.5-i*7,Math.random()*(i%23===0?25:3)*(1+bias*.4)]);asks.push([base+.5+i*7,Math.random()*(i%19===0?25:3)*(1-bias*.4)])}if(j===0){bids.push([Math.round(base/100)*100-300,180]);asks.push([Math.round(base/100)*100+500,620])}if(j===1&&Math.sin(t/40000)>0)bids.push([Math.round(base/50)*50-150,130]);if(j===3)asks.push([Math.round(base/100)*100+200,110]);bookSet(k,bids,asks,true)});
+  CB=base+bias*20;EX.binance.idx=base;
+  if(Math.random()<.1)bnOIHist=Array.from({length:12},(_,i)=>({t:t-(11-i)*300e3,v:95000*(1+bias*.002*i/11)}));
+},1000);
+function resetSignal(){KL.length=0;FLOW.perp=[];FLOW.spot=[];for(const k in BOOK)delete BOOK[k];SIG.hist=[];SIG.log=SIG.log.filter(x=>!x.demo);SIG.side=0;SIG.streak={d:0,n:0};CB=null;bnOIHist=[];booted=false}
+
+/* ================= 総評のコピー・音 ================= */
+function snapSignal(){
+  const t=Date.now(),F=SIG.F,L=[],[vt]=verdict(SIG.score);
+  L.push(`【総評シグナル】${new Date(t).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false})} JST（ページ表示 ${Math.round((t-T0)/60000)}分・${MODE==='LIVE'?'LIVE':'DEMO＝実データではない'}）`);
+  L.push(`■総合スコア ${SIG.score>0?'+':''}${SIG.score}（${vt}）シグナル ${SIG.side>0?'LONG':SIG.side<0?'SHORT':'WAIT'}・材料 ${SIG.cov||0}/100・価格 ${KL.length?f1(KL[KL.length-1].c):'—'}`);
+  Object.keys(W).forEach(k=>{const f=F[k];L.push(`　${FN[k][0]}（重み${W[k]}）: ${f?(Math.round(W[k]*f.v)>0?'+':'')+Math.round(W[k]*f.v)+'点 '+f.txt+' → '+f.why:'データなし'}`)});
+  L.push('■板（±0.5% 買い / 売り / 偏り）');
+  BOOK_EX.forEach(k=>{const s=bookStats(k);if(s)L.push(`　${EX[k].name}: ${usd(s.b5)} / ${usd(s.a5)} / ${sg(s.imb*100,0)}%`)});
+  const WL=[...WH.live.values()].sort((a,b)=>b.q-a.q).slice(0,8);if(WL.length){L.push(`■大口注文（${WH.min}BTC以上・±3%以内）`);WL.forEach(w=>L.push(`　${w.side==='bid'?'買い':'売り'} ${f1(w.p)}（${w.side==='bid'?'−':'+'}${(w.d*100).toFixed(2)}%）${w.q.toFixed(0)}BTC ${EX[w.k].name}・${ago(t-w.first)}前から`))}
+  WH.gone.slice(0,5).forEach(g=>L.push(`　消えた ${g.side==='bid'?'買い':'売り'} ${f1(g.p)} ${g.max.toFixed(0)}BTC ${EX[g.k].name} → ${g.how}`));
+  const ent=SIG.log.filter(e=>e.type!=='EXIT'&&t-e.t<12*36e5).slice(0,6);
+  if(ent.length){L.push('■直近12時間のシグナル');ent.forEach(e=>L.push(`　${jst(e.t)} ${e.type} スコア${e.score} @${f1(e.price)} → 15分 ${typeof e.r15==='number'?sg(e.r15,2)+'%':'—'} / 60分 ${typeof e.r60==='number'?sg(e.r60,2)+'%':'—'}`))}
+  return L.join('\n');
+}
+$('sg-copy').addEventListener('click',()=>{
+  const txt=snapSignal(),btn=$('sg-copy'),box=$('sg-box');box.value=txt;
+  const done=ok=>{btn.textContent=ok?'✓ コピーしました':'下の枠を長押しでコピー';setTimeout(()=>{btn.textContent='📋 クロちゃん用コピー'},2500)};
+  const fb=()=>{box.hidden=false;box.focus();box.select();done(false)};
+  try{navigator.clipboard.writeText(txt).then(()=>{box.hidden=true;done(true)},fb)}catch(e){fb()}
+});
+$('sg-sound').addEventListener('click',()=>{SIG.sound=!SIG.sound;if(SIG.sound&&!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){SIG.sound=false}}if(AC&&AC.state==='suspended')AC.resume();
+  $('sg-sound').textContent=SIG.sound?'🔊 シグナル音 ON':'🔇 シグナル音 OFF';$('sg-sound').setAttribute('aria-pressed',String(SIG.sound));if(SIG.sound)beep(true)});
+setInterval(()=>{if(!$('v-signal').hidden)renderSignal();if(!$('v-compare').hidden)renderBooks()},1000);
+/* ================= 大口注文（板の巨大な指値） ================= */
+const WH={min:LS.get('ck-whmin',100),live:new Map(),gone:[]};
+function beepWall(){if(!SIG.sound||!AC)return;let t0=AC.currentTime+.02;for(const f of [196,392,196]){const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.2,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+.3);o.connect(g).connect(AC.destination);o.start(t0);o.stop(t0+.32);t0+=.22}}
+function scanWalls(){
+  const t=Date.now(),seen=new Set(),fresh={},range={};
+  BOOK_EX.forEach(k=>{const s=bookStats(k);if(!s)return;fresh[k]=s;const B=BOOK[k];
+    let lo=Infinity,hi=-Infinity;for(const p of B.b.keys())if(p<lo)lo=p;for(const p of B.a.keys())if(p>hi)hi=p;range[k]=[lo,hi];
+    for(const [side,M] of [['bid',B.b],['ask',B.a]])for(const [p,q] of M){
+      if(q<WH.min)continue;const d=side==='bid'?(s.mid-p)/s.mid:(p-s.mid)/s.mid;if(d>.03||d<0)continue;
+      const key=k+'|'+side+'|'+p;seen.add(key);const w=WH.live.get(key);
+      if(w){w.q=q;w.max=Math.max(w.max,q);w.d=d}
+      else{WH.live.set(key,{k,side,p,q,max:q,first:t,d});if(d<=.01&&t-T0>15e3)beepWall()}}});
+  for(const [key,w] of WH.live){if(seen.has(key))continue;const s=fresh[w.k];
+    if(!s)continue; /* book not fresh: keep, can't judge */
+    WH.live.delete(key);const [lo,hi]=range[w.k]||[0,0];
+    if(w.side==='bid'?w.p<lo:w.p>hi)continue; /* fell outside the fetched depth window */
+    if(t-w.first<3000)continue;
+    const hit=w.side==='bid'?s.bb<=w.p+.5:s.ba>=w.p-.5;
+    WH.gone.unshift({...w,end:t,how:hit?'約定（食われた）':'取消（見せ板の可能性）'});}
+  WH.gone=WH.gone.filter(g=>t-g.end<1800e3).slice(0,20);
+}
+const ago=ms=>{const s=Math.floor(ms/1000);return s<60?s+'秒':s<3600?Math.floor(s/60)+'分':Math.floor(s/3600)+'時間'+Math.floor(s%3600/60)+'分'};
+function renderWalls(){
+  const t=Date.now(),L=[...WH.live.values()];
+  const tot=side=>L.filter(w=>w.side===side).reduce((a,w)=>a+w.q,0);
+  $('wh-sum').innerHTML=`買い <b class="up">${f0(tot('bid'))} BTC</b> / 売り <b class="dn">${f0(tot('ask'))} BTC</b>（±3%以内・${L.length}件）`;
+  const row=w=>{const big=w.q>=WH.min*5,neu=t-w.first<60e3;
+    return `<div class="whrow ${w.side==='bid'?'b':'a'}${big?' huge':''}${neu?' new':''}"><span class="whp">${f1(w.p)}</span><span class="whq">${w.q>=1000?f0(w.q):w.q.toFixed(w.q>=100?0:1)} BTC${big?' 超大口':''}</span><span class="ex"><i style="background:${EX[w.k].col}"></i>${EX[w.k].name}${w.k==='hyper'?'（集約）':''}</span><span class="dim">${w.side==='bid'?'−':'+'}${(w.d*100).toFixed(2)}% · ${ago(t-w.first)}前から${neu?' <b class="gold">NEW</b>':''}</span><i class="whbar" style="width:${Math.min(100,w.q/(WH.min*10)*100).toFixed(0)}%"></i></div>`};
+  const col=side=>{const a=L.filter(w=>w.side===side).sort((x,y)=>side==='bid'?y.p-x.p:x.p-y.p);return a.length?a.slice(0,12).map(row).join(''):`<p class="note">${WH.min} BTC以上の${side==='bid'?'買い':'売り'}注文はありません</p>`};
+  $('wh-bid').innerHTML=col('bid');$('wh-ask').innerHTML=col('ask');
+  $('wh-gone').innerHTML=WH.gone.length?WH.gone.slice(0,8).map(g=>`<div class="whg"><span class="dim">${jst(g.end,true)}</span><span class="${g.side==='bid'?'up':'dn'}">${g.side==='bid'?'買い':'売り'} ${f1(g.p)} · ${g.max.toFixed(0)} BTC · ${EX[g.k].name}</span><span class="${g.how.startsWith('約定')?'gold':'dim'}">${g.how}（${ago(g.end-g.first)}置かれていた）</span></div>`).join(''):'<p class="note">消えた大口注文はまだありません。</p>';
+}
+$('wh-min').value=String(WH.min);
+$('wh-min').addEventListener('change',e=>{WH.min=+e.target.value;LS.set('ck-whmin',WH.min);WH.live.clear();WH.gone=[];scanWalls();renderWalls()});
+setInterval(()=>{scanWalls();if(!$('v-signal').hidden)renderWalls()},1000);
+
+
+/* ---------- クロちゃん用コピー ---------- */
+function snapText(){
+  const t=Date.now(),px=pxRef(),L=[];
+  L.push(`【取引所比較スナップショット】${new Date(t).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',hour12:false})} JST（ページ表示 ${Math.round((t-T0)/60000)}分・${MODE==='LIVE'?'LIVE':'DEMO＝実データではない'}）`);
+  L.push('■資金調達率（実際 / 間隔 / 8h換算 / 年率）');
+  Object.keys(EX).forEach(k=>{const e=EX[k],v=fr8(e);L.push(`　${e.name}: ${e.fr==null?'—':sg(e.fr*100,4)+'%'} / ${e.frH?e.frH+'h':'不明'} / ${v==null?'—':sg(v*100,4)+'%'} / ${v==null?'—':sg(v*3*365*100,1)+'%'}`)});
+  L.push(`　${$('t-fr').textContent} OI加重・乖離 ${$('t-sp').textContent}（${$('t-sp2').textContent}）`);
+  L.push('■建玉（BTC / 開いてから / 直近5分）');
+  Object.keys(EX).forEach(k=>{const e=EX[k];if(!e.oi)return;let r=e.oiH[0];for(const p of e.oiH){if(p.t<=t-300e3)r=p;else break}
+    L.push(`　${e.name}: ${f0(e.oi)}₿（${usd(e.oi*(e.px||px))}）/ ${sg(e.oi-e.oi0,1)}₿ / ${r?sg((e.oi/r.v-1)*100,2)+'%':'—'}`)});
+  L.push(`　合計 ${$('t-oi').textContent}（${$('t-oi2').textContent}）`);
+  L.push('■清算（開いてから・ロング / ショート / 件数）');
+  LIQ_EX.forEach(k=>{const e=EX[k];L.push(`　${e.name}: ${usd(e.L)} / ${usd(e.S)} / ${e.n}件`)});
+  L.push(`　直近60分 ${$('t-lq').textContent.replace(/\s+/g,' ')}`);
+  BIG.slice(0,5).forEach(b=>L.push(`　大口 ${jst(b.t,true)} ${EX[b.k].name} ${b.longLiq?'ロング':'ショート'}清算 ${usd(b.u)}`));
+  return L.join('\n');
+}
+$('snapbtn').addEventListener('click',()=>{
+  const txt=snapText(),btn=$('snapbtn'),box=$('snapbox');box.value=txt;
+  const done=ok=>{btn.textContent=ok?'✓ コピーしました':'下の枠を長押しでコピー';setTimeout(()=>{btn.textContent='📋 クロちゃん用コピー'},2500)};
+  const fb=()=>{box.hidden=false;box.focus();box.select();done(false)};
+  try{navigator.clipboard.writeText(txt).then(()=>{box.hidden=true;done(true)},fb)}catch(e){fb()}
+});
+})();
+</script>
+
+</body></html>
