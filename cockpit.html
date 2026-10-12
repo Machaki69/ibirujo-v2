@@ -26,8 +26,9 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;border:1px so
 .hr{margin-left:auto;display:flex;gap:12px;align-items:center}
 .clock{font-family:var(--f-display);font-size:17px}
 .pill{font-size:9px;letter-spacing:.12em;padding:2px 7px;border:1px solid currentColor;text-transform:uppercase}
-nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:6px;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line)}
-nav button{flex:1;font:600 12px var(--f-data);letter-spacing:.06em;padding:9px 6px;background:var(--panel);color:var(--dim);border:1px solid var(--line);cursor:pointer}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:6px;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:1 0 auto;white-space:nowrap;padding-inline:12px!important;font:600 12px var(--f-data);letter-spacing:.06em;padding:9px 6px;background:var(--panel);color:var(--dim);border:1px solid var(--line);cursor:pointer}
 nav button[aria-selected="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
 nav button:focus-visible,.btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .panel{border:1px solid var(--line);background:var(--panel);padding:8px 10px;min-width:0}
@@ -122,12 +123,16 @@ label.opt{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim
 
 <div class="wrap">
   <header>
-    <div class="logo"><b>₿</b><div>BTC全部喰い COCKPIT<small>総評シグナル · 取引所比較 · フローコア · 三核合議</small></div></div>
+    <div class="logo"><b>₿</b><div>BTC全部喰い COCKPIT<small>総評 · 取引所 · クジラ · オプション · 先行 · マネー · フロー · 三核</small></div></div>
     <div class="hr"><span id="mode" class="pill gold">接続中</span><span class="clock" id="clock">--:--:--</span></div>
   </header>
   <nav role="tablist" aria-label="画面切り替え">
-    <button role="tab" id="tab-signal" aria-selected="true" aria-controls="v-signal" data-v="signal">総評シグナル</button>
+    <button role="tab" id="tab-signal" aria-selected="true" aria-controls="v-signal" data-v="signal">総評</button>
     <button role="tab" id="tab-compare" aria-selected="false" aria-controls="v-compare" data-v="compare">取引所比較</button>
+    <button role="tab" id="tab-whale" aria-selected="false" aria-controls="v-whale" data-v="whale">🐋 クジラ</button>
+    <button role="tab" id="tab-opt" aria-selected="false" aria-controls="v-opt" data-v="opt">オプション</button>
+    <button role="tab" id="tab-lead" aria-selected="false" aria-controls="v-lead" data-v="lead">先行レーダー</button>
+    <button role="tab" id="tab-money" aria-selected="false" aria-controls="v-money" data-v="money">マネー＆記録</button>
     <button role="tab" id="tab-flow" aria-selected="false" aria-controls="v-flow" data-v="flow">フローコア</button>
     <button role="tab" id="tab-sankaku" aria-selected="false" aria-controls="v-sankaku" data-v="sankaku">三核合議</button>
   </nav>
@@ -222,6 +227,115 @@ label.opt{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim
     </div>
   </section>
 
+  <!-- ===== ① Hyperliquid クジラ ===== -->
+  <section id="v-whale" role="tabpanel" aria-labelledby="tab-whale" class="wrap" style="gap:8px" hidden>
+    <div class="tiles">
+      <div class="tile"><span>クジラのロング合計</span><strong id="hl-long" class="up">—</strong><em id="hl-long2">読み込み中</em></div>
+      <div class="tile"><span>クジラのショート合計</span><strong id="hl-short" class="dn">—</strong><em id="hl-short2">読み込み中</em></div>
+      <div class="tile"><span>ネット（ロング−ショート）</span><strong id="hl-net">—</strong><em id="hl-net2">—</em></div>
+      <div class="tile"><span>追跡中のアカウント</span><strong id="hl-n">—</strong><em id="hl-n2">—</em></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>クジラの清算ラインマップ · BTC</b><span>上 = ロングの清算価格 · 下 = ショートの清算価格</span></div>
+      <canvas id="cv-hlliq" class="cv-l"></canvas>
+      <p class="note">Hyperliquidの大口アカウントが持つBTCポジションの清算価格を$500刻みで合計したもの。紫の山（現在値の下）はロングが投げさせられる価格帯、水色の山（上）はショートが踏まされる価格帯です。価格が山に近づくと、清算の連鎖が起きやすくなります。</p>
+    </div>
+    <section class="row r2">
+      <div class="panel">
+        <div class="ph"><b>大口ポジション上位</b><span id="hl-upd">—</span></div>
+        <div class="tbl" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>アカウント</th><th>方向</th><th>BTC</th><th>建値</th><th>清算価格</th><th>距離</th><th>含み損益</th><th>レバ</th></tr></thead><tbody id="hl-pos"><tr><td colspan="8" class="dim">読み込み中…</td></tr></tbody></table></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><b>クジラの動き</b><span>新規・積み増し・減らし・決済・ドテン</span></div>
+        <div class="lqlist" id="hl-ev" style="max-height:200px"><p class="note">ポジションの変化をここに流します（1分ごとに全員を確認）。</p></div>
+        <div class="ph" style="margin-top:12px"><b>大口約定 · アドレス付き</b><span>$1M以上 · 🐋 = 追跡中のクジラ</span></div>
+        <div class="lqlist" id="hl-tr" style="max-height:200px"><p class="note">Hyperliquidの約定は買い手と売り手のアドレスが公開されています。</p></div>
+      </div>
+    </section>
+    <div class="panel">
+      <div class="ph"><b>追加で見張るアドレス</b><span>1行に1つ（0x…）</span></div>
+      <textarea id="hl-extra" rows="3" style="width:100%;font:11px var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:6px" placeholder="0x…"></textarea>
+      <div class="ctrl" style="margin-top:6px"><button type="button" class="btn ghost" id="hl-save">保存して追跡</button><span class="note" id="hl-src" style="margin:0"></span></div>
+    </div>
+  </section>
+
+  <!-- ===== ② オプション（Deribit） ===== -->
+  <section id="v-opt" role="tabpanel" aria-labelledby="tab-opt" class="wrap" style="gap:8px" hidden>
+    <div class="panel">
+      <div class="ph"><b>ガンマ環境</b><span id="op-upd">—</span></div>
+      <p id="op-regime" style="margin:0;font-size:15px;font-weight:600">計算中…</p>
+      <p class="note" id="op-regime2" style="margin:4px 0 0"></p>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span>総GEX（1%あたり）</span><strong id="op-gex">—</strong><em id="op-gex2">—</em></div>
+      <div class="tile"><span>ガンマフリップ</span><strong id="op-flip">—</strong><em id="op-flip2">—</em></div>
+      <div class="tile"><span>コールウォール / プットウォール</span><strong id="op-walls">—</strong><em id="op-walls2">—</em></div>
+      <div class="tile"><span>Max Pain</span><strong id="op-mp">—</strong><em id="op-mp2">—</em></div>
+      <div class="tile"><span>P/C比（建玉 / 24h出来高）</span><strong id="op-pcr">—</strong><em id="op-pcr2">—</em></div>
+      <div class="tile"><span>DVOL / ATM IV</span><strong id="op-iv">—</strong><em id="op-iv2">—</em></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>行使価格別GEX</b><span>緑 = 正ガンマ（コール） · 赤 = 負ガンマ（プット）</span></div>
+      <canvas id="cv-gex" class="cv-l"></canvas>
+      <p class="note">Deribitの全BTCオプションの建玉とIVから、ブラック・ショールズでガンマを計算（1分ごと）。ディーラーがコールを買い持ち・プットを売り持ちしている前提の一般的な計算です。白線が現在値、黄色の破線がガンマフリップ。</p>
+    </div>
+    <section class="row r2">
+      <div class="panel">
+        <div class="ph"><b>IVの期間構造</b><span>満期ごとのATM IV</span></div>
+        <canvas id="cv-term" class="cv"></canvas>
+        <div class="tbl" style="margin-top:8px"><table><thead><tr><th>満期</th><th>残り</th><th>ATM IV</th><th>建玉</th><th>Max Pain</th></tr></thead><tbody id="op-exp"></tbody></table></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><b>大口オプション取引</b><span>25BTC以上か$25万以上 · BLOCK = ブロック取引</span></div>
+        <div class="lqlist" id="op-tr" style="max-height:420px"><p class="note">Deribitのオプション約定をリアルタイムで流します。</p></div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===== ③ 先行レーダー ===== -->
+  <section id="v-lead" role="tabpanel" aria-labelledby="tab-lead" class="wrap" style="gap:8px" hidden>
+    <div class="panel">
+      <div class="ph"><b>価格レース · 直近90秒</b><span>各取引所の90秒前からの変化（bps）</span></div>
+      <canvas id="cv-race" class="cv-l"></canvas>
+      <div class="legend" id="rd-legend"></div>
+    </div>
+    <section class="row r2">
+      <div class="panel">
+        <div class="ph"><b>誰が先に動いたか</b><span>しきい値 <select id="rd-thr" style="font:500 11px var(--f-data);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:2px"><option value="8">8bps</option><option value="12" selected>12bps</option><option value="20">20bps</option><option value="35">35bps</option></select></span></div>
+        <div class="tbl"><table><thead><tr><th>取引所</th><th>先頭回数</th><th>先頭率</th><th>平均の遅れ</th><th>受信</th></tr></thead><tbody id="rd-board"></tbody></table></div>
+        <div class="lqlist" id="rd-ev" style="max-height:260px"><p class="note">10秒で価格がしきい値以上動いたら、各取引所が同じ方向に動き始めた時刻を取引所のタイムスタンプで比べて順位をつけます。</p></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><b>地域別プレミアム</b><span>Binance現物との差</span></div>
+        <div class="tbl"><table><thead><tr><th>市場</th><th>価格（USD換算）</th><th>差</th><th>bps</th><th>意味</th></tr></thead><tbody id="rd-prem"></tbody></table></div>
+        <canvas id="cv-prem" class="cv" style="margin-top:10px"></canvas>
+        <p class="note" id="rd-fx">韓国はUpbitのKRW-USDT、日本はbitbankと為替（日次）でドル換算しています。</p>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===== ④ マネー＆記録 ===== -->
+  <section id="v-money" role="tabpanel" aria-labelledby="tab-money" class="wrap" style="gap:8px" hidden>
+    <div class="tiles" id="st-tiles"></div>
+    <section class="row r2">
+      <div class="panel">
+        <div class="ph"><b>ステーブルコインの供給</b><span id="st-upd">DefiLlama · 10分ごと</span></div>
+        <div class="tbl"><table><thead><tr><th>銘柄</th><th>供給</th><th>24h</th><th>7日</th><th>30日</th></tr></thead><tbody id="st-body"><tr><td colspan="5" class="dim">読み込み中…</td></tr></tbody></table></div>
+        <div class="ph" style="margin-top:10px"><b>USDTのチェーン別</b><span>どこで増えているか</span></div>
+        <div class="share" id="st-chain"></div><div class="legend" id="st-chainlg"></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><b>発行・償却 · Ethereum</b><span>USDT / USDC · リアルタイム</span></div>
+        <div class="lqlist" id="st-mint" style="max-height:300px"><p class="note">新しく発行（ミント）されたステーブルコインは、相場に入ってくる「待機資金」です。償却（バーン）はその逆です。</p></div>
+        <p class="note" id="st-rpc"></p>
+      </div>
+    </section>
+    <div class="panel">
+      <div class="ph"><b>24時間記録 · 直近7日</b><span id="rec-upd">GitHub Actions · 15分ごと</span></div>
+      <div id="rec-body"></div>
+    </div>
+  </section>
+
   <!-- ===== 埋め込み ===== -->
   <section id="v-flow" role="tabpanel" aria-labelledby="tab-flow" hidden>
     <iframe id="f-flow" data-src="btc-flow-core.html" title="BTC Flow Core"></iframe>
@@ -247,7 +361,7 @@ const T0=Date.now();
 let MODE='WAIT';
 
 /* ---------- tabs & embedded pages ---------- */
-const VIEWS=['signal','compare','flow','sankaku'];
+const VIEWS=['signal','compare','whale','opt','lead','money','flow','sankaku'];
 function loadFrame(id){const f=$(id);if(f&&!f.src)f.src=f.dataset.src}
 function show(v){
   if(!VIEWS.includes(v))v='signal';
@@ -307,7 +421,7 @@ const BNS='streams=btcusdt@markPrice@1s/btcusdt@forceOrder/btcusdt@aggTrade';
 feedWS('binance',['wss://fstream.binance.com/market/stream?'+BNS,'wss://fstream.binance.com/stream?'+BNS],()=>{},(s,raw)=>{
   const d=JSON.parse(raw).data;if(!d||!live())return;
   if(d.e==='markPriceUpdate'){const e=EX.binance;e.fr=+d.r;e.next=+d.T;e.px=+d.p;e.idx=+d.i;seen('binance')}
-  else if(d.e==='aggTrade'){onTrade('perp',+d.q,!d.m,+d.p,+d.T)}
+  else if(d.e==='aggTrade'){onTrade('perp',+d.q,!d.m,+d.p,+d.T);RADAR.tick('bnperp',+d.p,+d.T)}
   else if(d.e==='forceOrder'){const o=d.o;const px=+(o.ap||o.p);addLiq('binance',o.S==='SELL',px*+(o.z||o.q),px,+o.T)}
 });
 async function pollBinanceOI(){if(!live())return;try{const r=await fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT');if(!r.ok)throw 0;const j=await r.json();setOI('binance',+j.openInterest)}catch(e){}}
@@ -317,15 +431,16 @@ const BY={};
 feedWS('bybit','wss://stream.bybit.com/v5/public/linear',s=>s.send(JSON.stringify({op:'subscribe',args:['tickers.BTCUSDT','allLiquidation.BTCUSDT','orderbook.200.BTCUSDT','publicTrade.BTCUSDT']})),(s,raw)=>{
   const m=JSON.parse(raw);if(!m.topic||!live())return;
   if(m.topic.startsWith('orderbook')){const d=m.data||{};bookSet('bybit',d.b,d.a,m.type==='snapshot');return}
-  if(m.topic.startsWith('publicTrade')){(m.data||[]).forEach(x=>onTrade('perp',+x.v,x.S==='Buy',+x.p,+x.T));return}
+  if(m.topic.startsWith('publicTrade')){(m.data||[]).forEach(x=>{onTrade('perp',+x.v,x.S==='Buy',+x.p,+x.T);RADAR.tick('bybit',+x.p,+x.T)});return}
   if(m.topic==='tickers.BTCUSDT'){Object.assign(BY,m.data);const e=EX.bybit;
     if(BY.fundingRate!=null&&BY.fundingRate!=='')e.fr=+BY.fundingRate;if(BY.nextFundingTime)e.next=+BY.nextFundingTime;if(BY.fundingIntervalHour)e.frH=+BY.fundingIntervalHour;
     if(BY.markPrice)e.px=+BY.markPrice;setOI('bybit',+BY.openInterest);seen('bybit')}
   else (m.data||[]).forEach(l=>addLiq('bybit',l.S==='Buy',(+l.v)*(+l.p),+l.p,+l.T));
 },s=>s.send(JSON.stringify({op:'ping'})));
 /* OKX */
-feedWS('okx','wss://ws.okx.com:8443/ws/v5/public',s=>s.send(JSON.stringify({op:'subscribe',args:[{channel:'open-interest',instId:'BTC-USDT-SWAP'},{channel:'funding-rate',instId:'BTC-USDT-SWAP'},{channel:'mark-price',instId:'BTC-USDT-SWAP'},{channel:'liquidation-orders',instType:'SWAP'},{channel:'books',instId:'BTC-USDT-SWAP'}]})),(s,raw)=>{
+feedWS('okx','wss://ws.okx.com:8443/ws/v5/public',s=>s.send(JSON.stringify({op:'subscribe',args:[{channel:'open-interest',instId:'BTC-USDT-SWAP'},{channel:'funding-rate',instId:'BTC-USDT-SWAP'},{channel:'mark-price',instId:'BTC-USDT-SWAP'},{channel:'liquidation-orders',instType:'SWAP'},{channel:'books',instId:'BTC-USDT-SWAP'},{channel:'trades',instId:'BTC-USDT-SWAP'}]})),(s,raw)=>{
   if(raw==='pong'||!live())return;const m=JSON.parse(raw);if(!m.data||!m.arg)return;const ch=m.arg.channel,e=EX.okx;
+  if(ch==='trades'){m.data.forEach(x=>RADAR.tick('okx',+x.px,+x.ts));return}
   if(ch==='books'){const d=m.data[0];bookSet('okx',d.bids,d.asks,m.action==='snapshot',0.01);return}
   if(ch==='open-interest'){const d=m.data[0];setOI('okx',+d.oiCcy);seen('okx')}
   else if(ch==='funding-rate'){const d=m.data[0];e.fr=+d.fundingRate;e.next=+d.fundingTime;if(+d.nextFundingTime&&+d.fundingTime)e.frH=Math.round((+d.nextFundingTime-+d.fundingTime)/36e5)||8;seen('okx')}
@@ -340,7 +455,8 @@ feedWS('bitget','wss://ws.bitget.com/v2/ws/public',s=>s.send(JSON.stringify({op:
   if(d.fundingRate!=null)e.fr=+d.fundingRate;if(d.nextFundingTime)e.next=+d.nextFundingTime;if(d.markPrice)e.px=+d.markPrice;setOI('bitget',+d.holdingAmount);seen('bitget');
 },s=>s.send('ping'));
 /* Hyperliquid (hourly funding) */
-feedWS('hyper','wss://api.hyperliquid.xyz/ws',s=>{s.send(JSON.stringify({method:'subscribe',subscription:{type:'activeAssetCtx',coin:'BTC'}}));s.send(JSON.stringify({method:'subscribe',subscription:{type:'l2Book',coin:'BTC',nSigFigs:4}}))},(s,raw)=>{
+feedWS('hyper','wss://api.hyperliquid.xyz/ws',s=>{s.send(JSON.stringify({method:'subscribe',subscription:{type:'activeAssetCtx',coin:'BTC'}}));s.send(JSON.stringify({method:'subscribe',subscription:{type:'l2Book',coin:'BTC',nSigFigs:4}}));s.send(JSON.stringify({method:'subscribe',subscription:{type:'trades',coin:'BTC'}}))},(s,raw)=>{
+  if(raw.indexOf('"trades"')>-1){const mt=JSON.parse(raw);if(mt.channel==='trades'){if(live())onHlTrades(mt.data||[]);return}}
   const m=JSON.parse(raw);if(m.channel==='l2Book'&&live()){const lv=m.data&&m.data.levels;if(lv)bookSet('hyper',lv[0],lv[1],true);return}if(m.channel!=='activeAssetCtx'||!live())return;const c=m.data&&m.data.ctx;if(!c)return;const e=EX.hyper;
   e.fr=+c.funding;e.px=+c.markPx;const n=new Date();n.setUTCMinutes(0,0,0);e.next=n.getTime()+36e5;setOI('hyper',+c.openInterest);seen('hyper');
 },s=>s.send(JSON.stringify({method:'ping'})));
@@ -370,7 +486,7 @@ function startDemo(){
   demoT=setInterval(()=>{const tt=Date.now();for(const k in EX){const e=EX[k];e.oi*=1+(Math.random()-.5)*.0006;e.fr+=(Math.random()-.5)*e.fr*.02;e.px=86000+Math.sin(tt/60000)*120}
     if(Math.random()<.25){const k=LIQ_EX[Math.floor(Math.random()*3)];addLiq(k,Math.random()<.6,Math.exp(9+Math.random()*4.5),86000,tt)}},1000);
 }
-function goLive(){if(demoT){resetSignal();clearInterval(demoT);demoT=null;for(const k in EX)Object.assign(EX[k],{oi:null,oi0:null,fr:null,oiH:[],frH8:[],L:0,S:0,n:0,max:0});for(const m in BUCK)delete BUCK[m];BIG.length=0;$('lqlist').innerHTML='<p class="note">$100k以上の清算がここに流れます。</p>'}setMode('LIVE')}
+function goLive(){if(demoT){resetSignal();resetDeep();clearInterval(demoT);demoT=null;for(const k in EX)Object.assign(EX[k],{oi:null,oi0:null,fr:null,oiH:[],frH8:[],L:0,S:0,n:0,max:0});for(const m in BUCK)delete BUCK[m];BIG.length=0;$('lqlist').innerHTML='<p class="note">$100k以上の清算がここに流れます。</p>'}setMode('LIVE')}
 setTimeout(()=>{if(MODE!=='LIVE')startDemo()},8000);
 function setMode(m){MODE=m;const el=$('mode');
   if(m==='LIVE'){el.textContent='LIVE';el.className='pill up';$('modenote').textContent='7取引所に直接つないでいます。OIの「開いてから」と清算の累計は、このページを開いた時点からの数字です。'}
@@ -487,9 +603,9 @@ function onTrade(kind,q,isBuy,p,t){
     if(!L||m>L.t){KL.push({t:m,o:p,h:p,l:p,c:p,v:q});if(KL.length>400)KL.shift()}
     else if(m===L.t){L.h=Math.max(L.h,p);L.l=Math.min(L.l,p);L.c=p;L.v+=q}}
 }
-feedWS('bnspot',['wss://stream.binance.com:9443/ws/btcusdt@aggTrade','wss://stream.binance.com/ws/btcusdt@aggTrade'],()=>{},(s,raw)=>{const d=JSON.parse(raw);if(d.e!=='aggTrade'||!live())return;onTrade('spot',+d.q,!d.m,+d.p,+d.T);SRC2.bnspot=Date.now()});
+feedWS('bnspot',['wss://stream.binance.com:9443/ws/btcusdt@aggTrade','wss://stream.binance.com/ws/btcusdt@aggTrade'],()=>{},(s,raw)=>{const d=JSON.parse(raw);if(d.e!=='aggTrade'||!live())return;onTrade('spot',+d.q,!d.m,+d.p,+d.T);RADAR.tick('bnspot',+d.p,+d.T);SRC2.bnspot=Date.now()});
 feedWS('coinbase','wss://ws-feed.exchange.coinbase.com',s=>s.send(JSON.stringify({type:'subscribe',product_ids:['BTC-USD'],channels:['matches']})),(s,raw)=>{
-  const m=JSON.parse(raw);if(m.type!=='match'||!live())return;CB=+m.price;onTrade('spot',+m.size,m.side==='sell',+m.price,Date.parse(m.time));SRC2.coinbase=Date.now()});
+  const m=JSON.parse(raw);if(m.type!=='match'||!live())return;CB=+m.price;onTrade('spot',+m.size,m.side==='sell',+m.price,Date.parse(m.time));RADAR.tick('coinbase',+m.price,Date.parse(m.time));SRC2.coinbase=Date.now()});
 const SRC2={};
 async function bootstrap(){
   if(booted||!live())return;booted=true;
@@ -709,6 +825,309 @@ $('wh-min').addEventListener('change',e=>{WH.min=+e.target.value;LS.set('ck-whmi
 setInterval(()=>{scanWalls();if(!$('v-signal').hidden)renderWalls()},1000);
 
 
+/* ======================================================================
+   深層モジュール：① HLクジラ ② オプション ③ 先行レーダー ④ マネー＆記録
+   ====================================================================== */
+const REPO_RAW='https://raw.githubusercontent.com/Machaki69/ibirujo-v2/data/';
+const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'—';
+const visible=id=>!$(id).hidden;
+const nowPx=()=>KL.length?KL[KL.length-1].c:pxRef();
+
+/* ---------------- ① Hyperliquid クジラ ---------------- */
+const HL={top:[],names:{},st:new Map(),ev:[],tr:[],cursor:0,src:'',lastFull:0};
+const hlInfo=async body=>{const r=await fetch('https://api.hyperliquid.xyz/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw r.status;return r.json()};
+async function hlLoadTop(){
+  if(!live())return;
+  let list=[];
+  try{const r=await fetch('https://stats-data.hyperliquid.xyz/Mainnet/leaderboard');const j=await r.json();
+    const rows=(j.leaderboardRows||[]).filter(x=>+x.accountValue>=1e6).sort((a,b)=>+b.accountValue-+a.accountValue).slice(0,120);
+    rows.forEach(x=>{list.push(x.ethAddress);if(x.displayName)HL.names[x.ethAddress]=x.displayName});HL.src='リーダーボード上位（口座残高$1M以上）'}catch(e){}
+  if(!list.length){try{const r=await fetch(REPO_RAW+'hl-top.json',{cache:'no-store'});const j=await r.json();(j.top||[]).forEach(x=>{list.push(x.a);if(x.n)HL.names[x.a]=x.n});HL.src='24時間記録係が集めた上位リスト'}catch(e){}}
+  const extra=LS.get('ck-hlextra','').split(/\s+/).filter(a=>/^0x[0-9a-fA-F]{40}$/.test(a));
+  HL.top=[...new Set([...extra,...list])];
+  $('hl-src').textContent=HL.top.length?`${HL.src||'手動リスト'}・${extra.length}件の手動追加を含む`:'上位リストを取得できませんでした。下の欄にアドレスを入れると追跡できます。';
+}
+function hlEvent(a,kind,d,p){HL.ev.unshift({t:Date.now(),a,kind,d,p});if(HL.ev.length>60)HL.ev.pop()}
+async function hlPoll(){
+  if(!live()||!HL.top.length)return;
+  for(let k=0;k<4;k++){const a=HL.top[HL.cursor++%HL.top.length];
+    try{const j=await hlInfo({type:'clearinghouseState',user:a});
+      const ap=(j.assetPositions||[]).map(x=>x.position).find(p=>p.coin==='BTC');
+      const prev=HL.st.get(a),px=nowPx();
+      const cur=ap?{szi:+ap.szi,entry:+ap.entryPx,liq:ap.liquidationPx?+ap.liquidationPx:null,pnl:+ap.unrealizedPnl,lev:ap.leverage?+ap.leverage.value:null,val:Math.abs(+ap.positionValue)}:null;
+      const acct=+(j.marginSummary&&j.marginSummary.accountValue)||0;
+      if(prev&&prev.cur&&cur){const a0=prev.cur.szi,a1=cur.szi;
+        if(Math.sign(a0)!==Math.sign(a1))hlEvent(a,'ドテン',a1,px);
+        else{const ch=Math.abs(a1)-Math.abs(a0);if(Math.abs(ch)>=Math.max(1,Math.abs(a0)*.1))hlEvent(a,ch>0?'積み増し':'減らし',a1>0?ch:-ch,px)}}
+      else if(prev&&!prev.cur&&cur)hlEvent(a,'新規',cur.szi,px);
+      else if(prev&&prev.cur&&!cur)hlEvent(a,'決済',-prev.cur.szi,px);
+      HL.st.set(a,{cur,acct,t:Date.now()});
+    }catch(e){}}
+}
+function onHlTrades(arr){
+  for(const x of arr){const px=+x.px,sz=+x.sz,u=px*sz;RADAR.tick('hyper',px,+x.time);
+    if(u>=1e6){const [b,s]=x.users||[];HL.tr.unshift({t:+x.time,px,sz,u,side:x.side,b,s});if(HL.tr.length>40)HL.tr.pop()}}
+}
+function renderWhale(){
+  const px=nowPx(),P=[...HL.st.entries()].filter(([,v])=>v.cur);
+  let L=0,S=0,nl=0,ns=0,el=0,es=0;P.forEach(([,v])=>{const c=v.cur,u=Math.abs(c.szi)*px;if(c.szi>0){L+=u;nl++;el+=c.entry*c.szi}else{S+=u;ns++;es+=c.entry*-c.szi}});
+  const bl=L/px,bs=S/px;
+  $('hl-long').textContent=usd(L);$('hl-long2').textContent=`${f0(bl)} BTC · ${nl}人${bl?' · 平均建値 '+f0(el/bl):''}`;
+  $('hl-short').textContent=usd(S);$('hl-short2').textContent=`${f0(bs)} BTC · ${ns}人${bs?' · 平均建値 '+f0(es/bs):''}`;
+  const net=L-S;$('hl-net').textContent=(net>=0?'+':'')+usd(net);$('hl-net').className=net>=0?'up':'dn';$('hl-net2').textContent=L+S?`ロング比率 ${(L/(L+S)*100).toFixed(0)}%`:'—';
+  $('hl-n').textContent=`${HL.st.size} / ${HL.top.length}`;$('hl-n2').textContent=`BTCを保有 ${P.length}人 · 1分で一巡`;
+  $('hl-upd').textContent=HL.st.size?'更新 '+jst(Math.max(...[...HL.st.values()].map(v=>v.t))):'—';
+  const rows=P.sort((a,b)=>Math.abs(b[1].cur.szi)-Math.abs(a[1].cur.szi)).slice(0,25);
+  $('hl-pos').innerHTML=rows.length?rows.map(([a,v])=>{const c=v.cur,d=c.liq?((c.liq/px-1)*100):null;
+    return `<tr><td><a href="https://app.hyperliquid.xyz/explorer/address/${a}" target="_blank" rel="noopener">${HL.names[a]||short(a)}</a></td><td class="${c.szi>0?'up':'dn'}"><b>${c.szi>0?'LONG':'SHORT'}</b></td><td>${f1(Math.abs(c.szi))}</td><td>${f0(c.entry)}</td><td>${c.liq?f0(c.liq):'<span class="dim">なし</span>'}</td><td class="${d==null?'dim':Math.abs(d)<5?'gold':''}">${d==null?'—':sg(d,1)+'%'}</td><td class="${c.pnl>=0?'up':'dn'}">${usd(c.pnl)}</td><td>${c.lev?c.lev+'x':'—'}</td></tr>`}).join(''):'<tr><td colspan="8" class="dim">BTCポジションを持つクジラを探しています…</td></tr>';
+  /* liquidation map */
+  const F=fit($('cv-hlliq'));if(F){const [x,w,h]=F;const step=500,lo=px*.8,hi=px*1.2,N=Math.ceil((hi-lo)/step);const up=new Array(N).fill(0),dn=new Array(N).fill(0);
+    P.forEach(([,v])=>{const c=v.cur;if(!c.liq||c.liq<lo||c.liq>=hi)return;const i=Math.floor((c.liq-lo)/step);(c.szi>0?up:dn)[i]+=Math.abs(c.szi)*px});
+    const mx=Math.max(...up,...dn,1),mid=h/2,bw=w/N;
+    if(!P.length)waitMsg(x,w,h,'クジラのポジションを集めています…');else{
+      for(let i=0;i<N;i++){if(up[i]){x.fillStyle=tok('--liqL');const hh=up[i]/mx*(mid-14);x.fillRect(i*bw,mid-hh,Math.max(1,bw-1),hh)}if(dn[i]){x.fillStyle=tok('--liqS');const hh=dn[i]/mx*(mid-14);x.fillRect(i*bw,mid,Math.max(1,bw-1),hh)}}
+      const xp=(px-lo)/(hi-lo)*w;x.strokeStyle=C.fg;x.setLineDash([3,3]);x.beginPath();x.moveTo(xp,4);x.lineTo(xp,h-4);x.stroke();x.setLineDash([]);
+      x.strokeStyle=C.line;x.beginPath();x.moveTo(0,mid);x.lineTo(w,mid);x.stroke();
+      x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';x.fillText(f0(lo),2,mid+12);x.textAlign='right';x.fillText(f0(hi),w-2,mid+12);x.textAlign='center';x.fillStyle=C.fg;x.fillText(f0(px),xp,mid+12);x.textAlign='left';
+      x.fillStyle=tok('--liqL');x.fillText('▲ ロングの清算 '+usd(up.reduce((a,b)=>a+b,0)),2,10);x.fillStyle=tok('--liqS');x.fillText('▼ ショートの清算 '+usd(dn.reduce((a,b)=>a+b,0)),2,h-3);
+      const top3=(arr,lab)=>arr.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).slice(0,1).forEach(o=>{if(!o.v)return;const xx=(o.i+.5)*bw;x.fillStyle=C.gold;x.textAlign='center';x.fillText(f0(lo+o.i*step)+' '+usd(o.v),xx,lab==='u'?Math.max(24,mid-(o.v/mx*(mid-14))-3):Math.min(h-14,mid+(o.v/mx*(mid-14))+10));x.textAlign='left'});
+      top3(up,'u');top3(dn,'d');}}
+  const nm=a=>HL.names[a]||short(a);
+  if(HL.ev.length)$('hl-ev').innerHTML=HL.ev.slice(0,30).map(e=>`<div class="lq" style="border-left-color:${e.d>0?C.buy:C.sell}"><span class="dim">${jst(e.t,true)}</span><span>${nm(e.a)} <b>${e.kind}</b> ${e.d>0?'ロング':'ショート'}</span><b>${f1(Math.abs(e.d))} BTC</b></div>`).join('');
+  if(HL.tr.length)$('hl-tr').innerHTML=HL.tr.slice(0,30).map(t=>{const wb=HL.st.has(t.b)?'🐋':'',ws=HL.st.has(t.s)?'🐋':'';return `<div class="lq" style="border-left-color:${t.side==='B'?C.buy:C.sell}"><span class="dim">${jst(t.t,true)}</span><span>${t.side==='B'?'<span class="up">成行買い</span>':'<span class="dn">成行売り</span>'} @${f0(t.px)} · 買 ${wb}${short(t.b)} / 売 ${ws}${short(t.s)}</span><b>${usd(t.u)}</b></div>`}).join('');
+}
+$('hl-extra').value=LS.get('ck-hlextra','');
+$('hl-save').addEventListener('click',()=>{LS.set('ck-hlextra',$('hl-extra').value);hlLoadTop()});
+let hlBooted=false;setInterval(()=>{if(MODE==='LIVE'&&!hlBooted){hlBooted=true;hlLoadTop()}},3000);
+setInterval(()=>{if(Date.now()-HL.lastFull>3600e3&&MODE==='LIVE'&&hlBooted){HL.lastFull=Date.now();hlLoadTop()}},60e3);
+setInterval(hlPoll,2000);
+
+/* ---------------- ② オプション（Deribit） ---------------- */
+const OP={chain:[],t:0,trades:[],dvol:null,res:null};
+const MON={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+function parseInst(n){const m=/^BTC-(\d{1,2})([A-Z]{3})(\d{2})-(\d+)-([CP])$/.exec(n);if(!m)return null;return {exp:Date.UTC(2000+ +m[3],MON[m[2]],+m[1],8),K:+m[4],cp:m[5],code:m[1]+m[2]+m[3]}}
+const npdf=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+function gammaAt(S,K,T,s){if(T<=0||s<=0)return 0;const d1=(Math.log(S/K)+.5*s*s*T)/(s*Math.sqrt(T));return npdf(d1)/(S*s*Math.sqrt(T))}
+function computeGex(chain,S){
+  const t=Date.now(),byK=new Map();let tot=0,cOI=0,pOI=0,cV=0,pV=0;const exps=new Map();
+  const opts=chain.map(o=>{const p=parseInst(o.instrument_name);if(!p)return null;return Object.assign(p,{oi:+o.open_interest||0,iv:(+o.mark_iv||0)/100,vol:+o.volume||0,S:+o.underlying_price||S})}).filter(o=>o&&o.exp>t);
+  for(const o of opts){const T=(o.exp-t)/31536e6;const g=gammaAt(S,o.K,T,o.iv)*o.oi*S*S*.01*(o.cp==='C'?1:-1);tot+=g;byK.set(o.K,(byK.get(o.K)||0)+g);
+    if(o.cp==='C'){cOI+=o.oi;cV+=o.vol}else{pOI+=o.oi;pV+=o.vol}
+    const e=exps.get(o.exp)||{exp:o.exp,code:o.code,oi:0,list:[]};e.oi+=o.oi;e.list.push(o);exps.set(o.exp,e)}
+  /* flip: total GEX as a function of spot */
+  const grid=[];for(let k=-30;k<=30;k++){const Sx=S*(1+k*.01);let g=0;for(const o of opts){const T=(o.exp-t)/31536e6;g+=gammaAt(Sx,o.K,T,o.iv)*o.oi*Sx*Sx*.01*(o.cp==='C'?1:-1)}grid.push({S:Sx,g})}
+  let flip=null,best=Infinity;for(let i=1;i<grid.length;i++){const a=grid[i-1],b=grid[i];if(Math.sign(a.g)!==Math.sign(b.g)){const x=a.S+(b.S-a.S)*(-a.g)/(b.g-a.g);if(Math.abs(x-S)<best){best=Math.abs(x-S);flip=x}}}
+  const ks=[...byK.entries()].filter(([K])=>K>S*.7&&K<S*1.3);
+  const cw=ks.reduce((m,e)=>e[1]>m[1]?e:m,[0,-Infinity]),pw=ks.reduce((m,e)=>e[1]<m[1]?e:m,[0,Infinity]);
+  const E=[...exps.values()].sort((a,b)=>a.exp-b.exp).map(e=>{
+    const strikes=[...new Set(e.list.map(o=>o.K))];let mp=null,mv=Infinity;
+    for(const K0 of strikes){let pain=0;for(const o of e.list)pain+=o.oi*(o.cp==='C'?Math.max(0,K0-o.K):Math.max(0,o.K-K0));if(pain<mv){mv=pain;mp=K0}}
+    const atm=e.list.filter(o=>o.iv>0).sort((a,b)=>Math.abs(a.K-S)-Math.abs(b.K-S)).slice(0,4);
+    return {exp:e.exp,code:e.code,oi:e.oi,mp,atm:atm.length?atm.reduce((a,o)=>a+o.iv,0)/atm.length:null}});
+  return {tot,byK,flip,cw:cw[0],cwv:cw[1],pw:pw[0],pwv:pw[1],pcr:cOI?pOI/cOI:null,pcrV:cV?pV/cV:null,E,S,n:opts.length,grid};
+}
+function optSend(s){s.send(JSON.stringify({jsonrpc:'2.0',id:77,method:'public/get_book_summary_by_currency',params:{currency:'BTC',kind:'option'}}))}
+let optSock=null;
+feedWS('deribitopt','wss://www.deribit.com/ws/api/v2',s=>{optSock=s;s.send(JSON.stringify({jsonrpc:'2.0',id:1,method:'public/subscribe',params:{channels:['trades.option.BTC.100ms','deribit_volatility_index.btc_usd']}}));optSend(s)},(s,raw)=>{
+  if(!live())return;const m=JSON.parse(raw);
+  if(m.id===77&&Array.isArray(m.result)){OP.chain=m.result;OP.t=Date.now();const S=+(m.result.find(o=>o.underlying_price)||{}).underlying_price||nowPx();OP.res=computeGex(OP.chain,S);return}
+  const p=m.params;if(!p)return;
+  if(p.channel==='deribit_volatility_index.btc_usd'){OP.dvol=+p.data.volatility;return}
+  if(p.channel&&p.channel.startsWith('trades.option'))for(const x of p.data){const prem=x.price*x.index_price*x.amount;
+    if(x.amount>=25||prem>=25e4){OP.trades.unshift({t:x.timestamp,n:x.instrument_name,amt:x.amount,prem,dir:x.direction,iv:x.iv,blk:!!x.block_trade_id});if(OP.trades.length>50)OP.trades.pop()}}
+},s=>s.send(JSON.stringify({jsonrpc:'2.0',id:9,method:'public/test',params:{}})));
+setInterval(()=>{if(optSock&&optSock.readyState===1&&live())try{optSend(optSock)}catch(e){}},60e3);
+const daysTo=t=>Math.max(0,(t-Date.now())/864e5);
+function renderOpt(){
+  const R=OP.res;if(!R){return}
+  const S=R.S,above=R.flip&&S>R.flip;
+  $('op-upd').textContent=`${R.n}銘柄 · 更新 ${jst(OP.t)}`;
+  $('op-regime').innerHTML=R.flip?(above?'<span class="up">正ガンマ圏</span>：ディーラーの調整売買が値動きを抑えやすい（レンジ・逆張り向き）':'<span class="dn">負ガンマ圏</span>：ディーラーの調整売買が値動きを加速させやすい（ブレイク・順張り向き）'):(R.tot>=0?'<span class="up">全体が正ガンマ</span>':'<span class="dn">全体が負ガンマ</span>');
+  $('op-regime2').textContent=R.flip?`現在値 ${f0(S)} はガンマフリップ ${f0(R.flip)} の${above?'上':'下'}（${sg((S/R.flip-1)*100,2)}%）。コールウォール ${f0(R.cw)} は上値の壁、プットウォール ${f0(R.pw)} は下値の支えになりやすい価格です。`:'';
+  $('op-gex').textContent=(R.tot>=0?'+':'')+usd(R.tot);$('op-gex').className=R.tot>=0?'up':'dn';$('op-gex2').textContent='価格が1%動いたときのディーラーの調整額';
+  $('op-flip').textContent=R.flip?f0(R.flip):'—';$('op-flip2').textContent=R.flip?`現在値から ${sg((R.flip/S-1)*100,2)}%`:'±30%に見つからず';
+  $('op-walls').innerHTML=`<span class="up">${f0(R.cw)}</span> / <span class="dn">${f0(R.pw)}</span>`;$('op-walls2').textContent=`${usd(R.cwv)} / ${usd(R.pwv)}`;
+  const near=R.E.find(e=>daysTo(e.exp)>=.1),big=[...R.E].sort((a,b)=>b.oi-a.oi)[0];
+  $('op-mp').textContent=near&&near.mp?f0(near.mp):'—';$('op-mp2').textContent=`${near?near.code+'満期':''}${big&&big!==near?' · 最大建玉 '+big.code+' '+f0(big.mp):''}`;
+  $('op-pcr').textContent=R.pcr?R.pcr.toFixed(2):'—';$('op-pcr2').textContent=`出来高 ${R.pcrV?R.pcrV.toFixed(2):'—'} · 1超はプット優勢`;
+  $('op-iv').textContent=`${OP.dvol?OP.dvol.toFixed(1):'—'} / ${near&&near.atm?(near.atm*100).toFixed(1):'—'}%`;$('op-iv2').textContent='DVOL / 直近満期のATM IV';
+  /* GEX by strike */
+  const F=fit($('cv-gex'));if(F){const [x,w,h]=F;const ks=[...R.byK.entries()].filter(([K])=>K>S*.75&&K<S*1.25).sort((a,b)=>a[0]-b[0]);
+    if(ks.length){const lo=S*.75,hi=S*1.25,mx=Math.max(...ks.map(e=>Math.abs(e[1])),1),mid=h/2-6,X=K=>(K-lo)/(hi-lo)*w,bw=Math.max(2,w/ks.length*.7);
+      ks.forEach(([K,g])=>{const hh=Math.abs(g)/mx*(mid-14);x.fillStyle=g>=0?C.buy:C.sell;x.fillRect(X(K)-bw/2,g>=0?mid-hh:mid,bw,hh)});
+      x.strokeStyle=C.line;x.beginPath();x.moveTo(0,mid);x.lineTo(w,mid);x.stroke();
+      x.strokeStyle=C.fg;x.beginPath();x.moveTo(X(S),4);x.lineTo(X(S),h-16);x.stroke();
+      if(R.flip&&R.flip>lo&&R.flip<hi){x.strokeStyle=C.gold;x.setLineDash([4,4]);x.beginPath();x.moveTo(X(R.flip),4);x.lineTo(X(R.flip),h-16);x.stroke();x.setLineDash([])}
+      x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';for(let i=0;i<=4;i++){const K=lo+(hi-lo)*i/4;x.textAlign=i===0?'left':i===4?'right':'center';x.fillText(f0(K),X(K),h-3)}x.textAlign='left';
+      x.fillText('+'+usd(mx),2,10);x.fillText('-'+usd(mx),2,h-18);
+      x.fillStyle=C.fg;x.textAlign='center';x.fillText('現在 '+f0(S),X(S),h-18+10);if(R.flip)x.fillStyle=C.gold,x.fillText('フリップ',X(R.flip),12);x.textAlign='left'}}
+  /* term structure */
+  const E=R.E.filter(e=>e.atm&&daysTo(e.exp)>=.1);const F2=fit($('cv-term'));if(F2){const [x,w,h]=F2;if(E.length>1){const ivs=E.map(e=>e.atm*100),lo=Math.min(...ivs)-2,hi=Math.max(...ivs)+2,dmax=daysTo(E[E.length-1].exp),X=d=>Math.sqrt(d/dmax)*(w-40)+20,Y=v=>(hi-v)/(hi-lo)*(h-24)+6;
+    x.strokeStyle=C.line;[lo+2,(lo+hi)/2,hi-2].forEach(v=>{x.beginPath();x.moveTo(0,Y(v));x.lineTo(w,Y(v));x.stroke();x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';x.fillText(v.toFixed(0)+'%',2,Y(v)-2)});
+    x.strokeStyle=tok('--accent');x.lineWidth=2;x.beginPath();E.forEach((e,i)=>{const xx=X(daysTo(e.exp)),yy=Y(e.atm*100);i?x.lineTo(xx,yy):x.moveTo(xx,yy)});x.stroke();x.lineWidth=1;
+    E.forEach(e=>{const xx=X(daysTo(e.exp)),yy=Y(e.atm*100);x.fillStyle=C.fg;x.beginPath();x.arc(xx,yy,2.5,0,7);x.fill()});
+    x.fillStyle=C.dim;x.textAlign='center';[E[0],E[Math.floor(E.length/2)],E[E.length-1]].forEach(e=>x.fillText(e.code,X(daysTo(e.exp)),h-3));x.textAlign='left'}else waitMsg(x,w,h,'満期データ待ち…')}
+  $('op-exp').innerHTML=R.E.filter(e=>daysTo(e.exp)>=.05).slice(0,8).map(e=>`<tr><td>${e.code}</td><td class="dim">${daysTo(e.exp)<1?(daysTo(e.exp)*24).toFixed(0)+'時間':daysTo(e.exp).toFixed(0)+'日'}</td><td>${e.atm?(e.atm*100).toFixed(1)+'%':'—'}</td><td>${f0(e.oi)} BTC</td><td>${e.mp?f0(e.mp):'—'}</td></tr>`).join('');
+  if(OP.trades.length)$('op-tr').innerHTML=OP.trades.slice(0,40).map(t=>{const p=parseInst(t.n);const call=p&&p.cp==='C';const bull=(call&&t.dir==='buy')||(!call&&t.dir==='sell');
+    return `<div class="lq" style="border-left-color:${bull?C.buy:C.sell}"><span class="dim">${jst(t.t,true)}</span><span>${t.blk?'<b class="gold">BLOCK</b> ':''}<b class="${t.dir==='buy'?'up':'dn'}">${t.dir==='buy'?'買い':'売り'}</b> ${p?p.code+' '+f0(p.K)+' '+(call?'コール':'プット'):t.n} · ${t.amt}BTC · IV ${t.iv?t.iv.toFixed(1):'—'}%</span><b>${usd(t.prem)}</b></div>`}).join('');
+}
+
+/* ---------------- ③ 先行レーダー ---------------- */
+const RV={coinbase:['Coinbase現物','#e8eef5'],bnspot:['Binance現物','#f3ba2f'],bnperp:['Binance先物','#c99a1f'],bybit:['Bybit先物','#ff7a45'],okx:['OKX先物','#9aa8b8'],hyper:['Hyperliquid','#8f7dff'],upbit:['Upbit（韓国）','#2fb1ff'],bitbank:['bitbank（日本）','#ff5fa2']};
+const RADAR={buf:{},last:{},recv:{},ev:[],lead:{},cnt:0,lag:{},cur:null,hist:[],
+  tick(v,p,t){if(!(p>0))return;t=t||Date.now();const B=this.buf[v]||(this.buf[v]=[]);const L=B[B.length-1];if(L&&t<L.t)t=L.t;B.push({t,p});const cut=t-120e3;while(B.length&&B[0].t<cut)B.shift();this.last[v]=p;this.recv[v]=Date.now()}};
+const RFX={krwUsdt:null,usdjpy:null,upbitKrw:null,bitbankJpy:null};
+function priceAt(B,t){let r=null;for(let i=B.length-1;i>=0;i--){if(B[i].t<=t){r=B[i].p;break}}return r??(B[0]&&B[0].p)}
+function radarScan(){
+  const thr=(+$('rd-thr').value||12)/1e4,now=Date.now(),vs=Object.keys(RADAR.buf).filter(v=>now-(RADAR.recv[v]||0)<8000);
+  if(vs.length<3)return;
+  const lt=v=>{const B=RADAR.buf[v];return B[B.length-1].t};
+  if(!RADAR.cur){for(const v of vs){const B=RADAR.buf[v],t=lt(v),p0=priceAt(B,t-10e3),r=B[B.length-1].p/p0-1;
+      if(Math.abs(r)>=thr){RADAR.cur={t0:now,dir:Math.sign(r),base:{},bt:{},hit:{}};vs.forEach(u=>{RADAR.cur.bt[u]=lt(u)-10e3;RADAR.cur.base[u]=priceAt(RADAR.buf[u],RADAR.cur.bt[u])});break}}}
+  const E=RADAR.cur;if(!E)return;
+  for(const v of vs){if(E.hit[v]||!E.base[v])continue;const B=RADAR.buf[v];for(const q of B){if(q.t<E.bt[v])continue;if((q.p/E.base[v]-1)*E.dir>=thr*.7){E.hit[v]=q.t;break}}}
+  if(now-E.t0>15e3){let order=Object.entries(E.hit).sort((a,b)=>a[1]-b[1]);if(order.length)order=order.filter(([,t])=>t-order[0][1]<=15e3);
+    if(order.length>=3){const t0=order[0][1];RADAR.ev.unshift({t:E.t0,dir:E.dir,order:order.map(([v,t])=>({v,dt:t-t0}))});if(RADAR.ev.length>40)RADAR.ev.pop();RADAR.cnt++;
+      RADAR.lead[order[0][0]]=(RADAR.lead[order[0][0]]||0)+1;order.forEach(([v,t])=>{const l=RADAR.lag[v]||(RADAR.lag[v]={s:0,n:0});l.s+=t-t0;l.n++})}
+    RADAR.cur=null}
+}
+setInterval(radarScan,250);
+/* Upbit (KRW-BTC + KRW-USDT for the kimchi premium) */
+feedWS('upbit','wss://api.upbit.com/websocket/v1',s=>{s.binaryType='arraybuffer';s.send(JSON.stringify([{ticket:'ck'+Date.now()},{type:'trade',codes:['KRW-BTC','KRW-USDT']}]))},(s,raw)=>{
+  if(!live())return;const txt=typeof raw==='string'?raw:new TextDecoder().decode(raw);const m=JSON.parse(txt);
+  if(m.code==='KRW-USDT'){RFX.krwUsdt=+m.trade_price;return}
+  if(m.code==='KRW-BTC'){RFX.upbitKrw=+m.trade_price;if(RFX.krwUsdt)RADAR.tick('upbit',m.trade_price/RFX.krwUsdt,+m.trade_timestamp)}
+});
+/* bitbank (socket.io over websocket) */
+feedWS('bitbank','wss://stream.bitbank.cc/socket.io/?EIO=4&transport=websocket',()=>{},(s,raw)=>{
+  if(raw==='2'){s.send('3');return}if(raw[0]==='0'){s.send('40');return}
+  if(raw.startsWith('40')){s.send('42["join-room","transactions_btc_jpy"]');return}
+  if(!raw.startsWith('42')||!live())return;const [ev,p]=JSON.parse(raw.slice(2));const d=p&&p.message&&p.message.data;if(ev!=='message'||!d)return;
+  (d.transactions||[]).forEach(x=>{RFX.bitbankJpy=+x.price;if(RFX.usdjpy)RADAR.tick('bitbank',x.price/RFX.usdjpy,x.executed_at)});
+});
+async function loadFx(){
+  try{const r=await fetch('https://open.er-api.com/v6/latest/USD');const j=await r.json();if(j.rates&&j.rates.JPY){RFX.usdjpy=j.rates.JPY;RFX.fxSrc='open.er-api（日次）';return}}catch(e){}
+  try{const r=await fetch(REPO_RAW+'history.json',{cache:'no-store'});const j=await r.json();const L=j[j.length-1];if(L&&L.fx){RFX.usdjpy=L.fx;RFX.fxSrc='24時間記録係'}}catch(e){}
+}
+loadFx();setInterval(loadFx,3600e3);
+const PREM=[];
+function renderLead(){
+  const now=Date.now(),vs=Object.keys(RV);
+  /* race */
+  const F=fit($('cv-race'));if(F){const [x,w,h]=F;const act=vs.filter(v=>RADAR.buf[v]&&RADAR.buf[v].length>1);
+    if(act.length<2)waitMsg(x,w,h,'各取引所の約定を集めています…');else{
+      const t1=Math.max(...act.map(v=>RADAR.buf[v][RADAR.buf[v].length-1].t)),t0=t1-90e3;let lo=-5,hi=5;const S={};
+      act.forEach(v=>{const B=RADAR.buf[v],b=priceAt(B,t0);S[v]=B.filter(q=>q.t>=t0).map(q=>({t:q.t,v:(q.p/b-1)*1e4}));S[v].forEach(q=>{lo=Math.min(lo,q.v);hi=Math.max(hi,q.v)})});
+      const pd=(hi-lo)*.1;lo-=pd;hi+=pd;const padR=40,X=t=>(t-t0)/90e3*(w-padR),Y=v=>(hi-v)/(hi-lo)*(h-14)+2;
+      x.strokeStyle=C.line;x.beginPath();x.moveTo(0,Y(0));x.lineTo(w-padR,Y(0));x.stroke();x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';[hi-pd,0,lo+pd].forEach(v=>x.fillText(sg(v,0),w-padR+4,Y(v)+3));
+      act.forEach(v=>{x.strokeStyle=RV[v][1];x.lineWidth=1.5;x.beginPath();let first=true,py=null;S[v].forEach(q=>{const xx=X(q.t),yy=Y(q.v);if(first){x.moveTo(xx,yy);first=false}else{x.lineTo(xx,py);x.lineTo(xx,yy)}py=yy});x.stroke()});x.lineWidth=1;
+      if(RADAR.ev[0]&&RADAR.ev[0].t>t0){x.fillStyle=C.gold;x.fillText('◆ 検知',X(RADAR.ev[0].t-12e3),10)}
+      x.fillStyle=C.dim;x.fillText('-90秒',0,h-2);x.textAlign='right';x.fillText('now',w-padR,h-2);x.textAlign='left'}}
+  $('rd-legend').innerHTML=vs.map(v=>`<span><i style="background:${RV[v][1]}"></i>${RV[v][0]}</span>`).join('');
+  $('rd-board').innerHTML=vs.map(v=>{const n=RADAR.lead[v]||0,l=RADAR.lag[v],fresh=now-(RADAR.recv[v]||0)<8000;
+    return `<tr><td><span class="ex"><i style="background:${RV[v][1]}"></i>${RV[v][0]}</span></td><td>${n}</td><td>${RADAR.cnt?(n/RADAR.cnt*100).toFixed(0)+'%':'—'}</td><td>${l&&l.n?'+'+(l.s/l.n/1000).toFixed(2)+'秒':'—'}</td><td class="${fresh?'up':'dim'}">${fresh?'●':'—'}</td></tr>`}).join('');
+  if(RADAR.ev.length)$('rd-ev').innerHTML=RADAR.ev.slice(0,25).map(e=>`<div class="lq" style="border-left-color:${e.dir>0?C.buy:C.sell};grid-template-columns:auto 1fr"><span class="dim">${jst(e.t,true)} ${e.dir>0?'<span class="up">▲上昇</span>':'<span class="dn">▼下落</span>'}</span><span>${e.order.map((o,i)=>`<span style="color:${RV[o.v][1]}">${i+1}.${RV[o.v][0].replace(/（.*）/,'')}</span>${i?'<span class="dim">+'+(o.dt/1000).toFixed(1)+'s</span>':''}`).join(' ')}</span></div>`).join('');
+  /* premiums */
+  const ref=RADAR.last.bnspot;const rows=[['coinbase','Coinbase（米国）',RADAR.last.coinbase,'米国の現物需要'],['upbit','Upbit（韓国）',RADAR.last.upbit,'キムチプレミアム'],['bitbank','bitbank（日本）',RADAR.last.bitbank,'日本プレミアム'],['bnperp','Binance先物',RADAR.last.bnperp,'先物の過熱'],['hyper','Hyperliquid',RADAR.last.hyper,'DeFi先物の過熱']];
+  $('rd-prem').innerHTML=rows.map(([k,n,p,m])=>{if(!p||!ref)return `<tr><td>${n}</td><td colspan="4" class="dim">接続待ち</td></tr>`;const d=p-ref,b=(p/ref-1)*1e4;return `<tr><td><span class="ex"><i style="background:${RV[k][1]}"></i>${n}</span></td><td>${f1(p)}</td><td class="${d>=0?'up':'dn'}">${(d>=0?'+':'')+d.toFixed(1)}</td><td class="${b>=0?'up':'dn'}">${sg(b,1)}</td><td class="dim">${m}</td></tr>`}).join('');
+  $('rd-fx').textContent=`韓国はUpbitのKRW-USDT（${RFX.krwUsdt?f1(RFX.krwUsdt)+'ウォン':'取得中'}）、日本はbitbankと為替 ${RFX.usdjpy?RFX.usdjpy.toFixed(2)+'円（'+(RFX.fxSrc||'')+'）':'取得中'} でドル換算。為替は日次なので、日本プレミアムは数bpsの誤差を含みます。`;
+  lines('cv-prem',[['coinbase'],['upbit'],['bitbank']].map(([k])=>({col:RV[k][1],pts:PREM.filter(r=>r[k]!=null).map(r=>({t:r.t,v:r[k]}))})),v=>sg(v,0)+'bps');
+}
+setInterval(()=>{const ref=RADAR.last.bnspot;if(!ref)return;const r={t:Date.now()};['coinbase','upbit','bitbank'].forEach(k=>{const p=RADAR.last[k];r[k]=p?(p/ref-1)*1e4:null});PREM.push(r);if(PREM.length>720)PREM.shift()},10e3);
+
+/* ---------------- ④ マネー＆記録 ---------------- */
+const ST={assets:null,t:0,mint:[],rpc:null,lastBlock:null};
+async function loadStables(){
+  if(!live())return;
+  try{const r=await fetch('https://stablecoins.llama.fi/stablecoins?includePrices=false');const j=await r.json();ST.assets=(j.peggedAssets||[]).filter(a=>a.pegType==='peggedUSD').sort((a,b)=>(b.circulating.peggedUSD||0)-(a.circulating.peggedUSD||0));ST.t=Date.now()}catch(e){}
+}
+setInterval(()=>{if(MODE==='LIVE'&&Date.now()-ST.t>600e3)loadStables()},5000);
+const TOK={'0xdac17f958d2ee523a2206206994597c13d831ec7':['USDT',6],'0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48':['USDC',6]};
+const TOPIC={transfer:'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',issue:'0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a',redeem:'0x702d5967f45f6513a38ffc42d6ba9bf230bd40e8f53b16363c7eb4fd2deb9a44'};
+const ZERO='0x0000000000000000000000000000000000000000000000000000000000000000';
+const RPCS=['https://ethereum-rpc.publicnode.com','https://eth.llamarpc.com','https://rpc.ankr.com/eth'];
+async function rpc(method,params){
+  for(let i=0;i<RPCS.length;i++){const u=ST.rpc||RPCS[i];try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error)throw j.error;ST.rpc=u;return j.result}catch(e){ST.rpc=null}}
+  throw new Error('rpc');
+}
+async function pollMints(){
+  if(!live())return;
+  try{const tip=parseInt(await rpc('eth_blockNumber',[]),16);let from=ST.lastBlock?ST.lastBlock+1:tip-300;if(tip-from>400)from=tip-400;if(from>tip)return;
+    const hx=n=>'0x'+n.toString(16),addr=Object.keys(TOK);
+    const q=[{address:addr[0],topics:[[TOPIC.issue,TOPIC.redeem]]},{address:addr[1],topics:[TOPIC.transfer,ZERO]},{address:addr[1],topics:[TOPIC.transfer,null,ZERO]}];
+    const logs=[];for(const f of q){const r=await rpc('eth_getLogs',[Object.assign({fromBlock:hx(from),toBlock:hx(tip)},f)]);logs.push(...(r||[]))}
+    for(const l of logs){const [sym,dec]=TOK[l.address.toLowerCase()]||['?',6];const amt=parseInt(l.data.slice(0,66),16)/10**dec;
+      const kind=l.topics[0]===TOPIC.issue?'発行':l.topics[0]===TOPIC.redeem?'償却':l.topics[1]===ZERO?'発行':'償却';
+      if(amt<1e5)continue;if(ST.mint.some(m=>m.tx===l.transactionHash&&m.sym===sym))continue;
+      ST.mint.unshift({blk:parseInt(l.blockNumber,16),tx:l.transactionHash,sym,kind,amt,seen:Date.now()})}
+    ST.mint.sort((a,b)=>b.blk-a.blk);ST.mint=ST.mint.slice(0,50);ST.lastBlock=tip;ST.tip=tip;
+  }catch(e){}
+}
+setInterval(pollMints,30e3);setTimeout(pollMints,6000);
+let REC=null,recT=0;
+async function loadRec(){try{const r=await fetch(REPO_RAW+'history.json',{cache:'no-store'});if(!r.ok)throw 0;const j=await r.json();if(Array.isArray(j)&&j.length){REC=j;recT=Date.now()}}catch(e){}}
+loadRec();setInterval(loadRec,600e3);
+function mini(id,pts,col,fmt,ref){
+  const F=fit($(id));if(!F)return;const [x,w,h]=F;if(pts.length<2)return waitMsg(x,w,h,'記録がたまると表示します');
+  let lo=Math.min(...pts.map(p=>p.v)),hi=Math.max(...pts.map(p=>p.v));if(ref!=null){lo=Math.min(lo,ref);hi=Math.max(hi,ref)}const pd=(hi-lo)*.1||Math.abs(hi)*.01||1;lo-=pd;hi+=pd;
+  const t0=pts[0].t,t1=pts[pts.length-1].t,X=t=>(t-t0)/Math.max(1,t1-t0)*(w-4)+2,Y=v=>(hi-v)/(hi-lo)*(h-16)+4;
+  if(ref!=null){x.strokeStyle=C.dim;x.setLineDash([3,3]);x.beginPath();x.moveTo(0,Y(ref));x.lineTo(w,Y(ref));x.stroke();x.setLineDash([])}
+  x.strokeStyle=col;x.lineWidth=1.5;x.beginPath();pts.forEach((p,i)=>i?x.lineTo(X(p.t),Y(p.v)):x.moveTo(X(p.t),Y(p.v)));x.stroke();x.lineWidth=1;
+  const L=pts[pts.length-1];x.fillStyle=col;x.beginPath();x.arc(X(L.t),Y(L.v),2.5,0,7);x.fill();
+  x.fillStyle=C.dim;x.font='9px "IBM Plex Mono",monospace';x.fillText(fmt(hi-pd),2,10);x.fillText(fmt(lo+pd),2,h-3);x.textAlign='right';x.fillStyle=C.fg;x.fillText(fmt(L.v),w-2,10);x.textAlign='left';
+}
+const REC_CH=[['px','BTC価格（Coinbase）',r=>r.px,f0,'#e8eef5'],['gex','総GEX（Deribit）',r=>r.drb&&r.drb.gex,v=>usd(v),'#22e6b8',0],['flip','ガンマフリップと価格の差',r=>r.drb&&r.drb.flip&&r.px?(r.px/r.drb.flip-1)*100:null,v=>sg(v,1)+'%','#ffc94a',0],['oi','建玉合計（OKX+HL+Deribit）',r=>r.okx&&r.hl&&r.drb?(r.okx.oi||0)+(r.hl.oi||0)+(r.drb.oi||0):null,v=>f0(v)+'₿','#3aa8ff'],['fr','資金調達率（HL・8h換算）',r=>r.hl&&r.hl.fr!=null?r.hl.fr*8*100:null,v=>sg(v,4)+'%','#8f7dff',0],['wh','HLクジラのネット',r=>r.hl&&r.hl.wl!=null?r.hl.wl-r.hl.ws:null,v=>usd(v),'#b06cff',0],['kp','キムチプレミアム',r=>r.prem&&r.prem.kimchi,v=>sg(v,0)+'bps','#2fb1ff',0],['cp','Coinbaseプレミアム',r=>r.prem&&r.prem.cb,v=>sg(v,1)+'bps','#e8eef5',0],['st','ステーブル総供給',r=>r.st&&r.st.total,v=>usd(v),'#22c7d6'],['dv','DVOL',r=>r.drb&&r.drb.dvol,v=>v.toFixed(1),'#ff7a45']];
+function renderMoney(){
+  const A=ST.assets;
+  if(A){const tot=A.reduce((a,x)=>a+(x.circulating.peggedUSD||0),0),pd=A.reduce((a,x)=>a+((x.circulatingPrevDay||{}).peggedUSD||0),0),pw=A.reduce((a,x)=>a+((x.circulatingPrevWeek||{}).peggedUSD||0),0),pm=A.reduce((a,x)=>a+((x.circulatingPrevMonth||{}).peggedUSD||0),0);
+    const ch=(a,b)=>b?a-b:0,cl=v=>v>=0?'up':'dn';
+    $('st-tiles').innerHTML=`<div class="tile"><span>ステーブル総供給</span><strong>${usd(tot)}</strong><em>${A.length}銘柄の合計</em></div><div class="tile"><span>24時間の増減</span><strong class="${cl(ch(tot,pd))}">${(ch(tot,pd)>=0?'+':'')+usd(ch(tot,pd))}</strong><em>待機資金の流入・流出</em></div><div class="tile"><span>7日の増減</span><strong class="${cl(ch(tot,pw))}">${(ch(tot,pw)>=0?'+':'')+usd(ch(tot,pw))}</strong><em>${pw?sg((tot/pw-1)*100,2)+'%':''}</em></div><div class="tile"><span>30日の増減</span><strong class="${cl(ch(tot,pm))}">${(ch(tot,pm)>=0?'+':'')+usd(ch(tot,pm))}</strong><em>${pm?sg((tot/pm-1)*100,2)+'%':''}</em></div>`;
+    $('st-upd').textContent='DefiLlama · 更新 '+jst(ST.t);
+    $('st-body').innerHTML=A.slice(0,8).map(a=>{const c=a.circulating.peggedUSD||0,d=(a.circulatingPrevDay||{}).peggedUSD,wk=(a.circulatingPrevWeek||{}).peggedUSD,m=(a.circulatingPrevMonth||{}).peggedUSD;const cell=b=>b?`<td class="${c-b>=0?'up':'dn'}">${(c-b>=0?'+':'')+usd(c-b)}</td>`:'<td class="dim">—</td>';return `<tr><td><b>${a.symbol}</b></td><td>${usd(c)}</td>${cell(d)}${cell(wk)}${cell(m)}</tr>`}).join('');
+    const usdt=A.find(a=>a.symbol==='USDT');if(usdt&&usdt.chainCirculating){const cs=Object.entries(usdt.chainCirculating).map(([k,v])=>[k,(v.current||{}).peggedUSD||0]).sort((a,b)=>b[1]-a[1]);const top=cs.slice(0,5),rest=cs.slice(5).reduce((a,x)=>a+x[1],0),T=cs.reduce((a,x)=>a+x[1],0),cols=['#22e6b8','#ff4d6d','#3aa8ff','#ffc94a','#8f7dff','#5f7d96'];
+      const parts=[...top,['その他',rest]];$('st-chain').innerHTML=parts.map((p,i)=>`<i style="width:${(p[1]/T*100).toFixed(2)}%;background:${cols[i]}"></i>`).join('');$('st-chainlg').innerHTML=parts.map((p,i)=>`<span><i style="background:${cols[i]}"></i>${p[0]} ${(p[1]/T*100).toFixed(1)}%</span>`).join('')}}
+  if(ST.mint.length)$('st-mint').innerHTML=ST.mint.slice(0,30).map(m=>`<div class="lq" style="border-left-color:${m.kind==='発行'?C.buy:C.sell}"><span class="dim">#${m.blk}</span><span><b class="${m.kind==='発行'?'up':'dn'}">${m.sym} ${m.kind}</b> <a href="https://etherscan.io/tx/${m.tx}" target="_blank" rel="noopener">${short(m.tx)}</a></span><b>${usd(m.amt)}</b></div>`).join('');
+  $('st-rpc').textContent=ST.tip?`Ethereum ブロック #${ST.tip} まで確認 · 10万ドル以上を表示 · TronのUSDTは上の「チェーン別」で増減を見られます`:'Ethereumのノードに接続しています…';
+  /* recorder */
+  if(!REC){$('rec-body').innerHTML=`<p class="note" style="font-size:12px;color:var(--fg)">まだ記録がありません。GitHub Actionsの「24時間記録係」をセットアップすると、ページを閉じている間も15分ごとにデータがたまり、ここに7日分のグラフが出ます。</p><p class="note">セットアップは recorder.yml と recorder.mjs の2ファイルを置くだけです（手順はクロちゃんのメッセージ参照）。</p>`;return}
+  const last=REC[REC.length-1];$('rec-upd').textContent=`${REC.length}件 · 最新 ${new Date(last.t).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}`;
+  if(!$('rec-grid')){$('rec-body').innerHTML='<div id="rec-grid" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">'+REC_CH.map(c=>`<div class="tile" style="gap:4px"><span>${c[1]}</span><canvas id="rc-${c[0]}" style="height:110px"></canvas></div>`).join('')+'</div>'}
+  REC_CH.forEach(c=>mini('rc-'+c[0],REC.map(r=>({t:r.t,v:c[2](r)})).filter(p=>p.v!=null&&isFinite(p.v)),c[4],c[3],c[5]));
+}
+
+/* ---------------- デモ（接続できない環境用） ---------------- */
+let deepDemo=false;
+setInterval(()=>{if(MODE!=='DEMO')return;const t=Date.now(),base=nowPx();
+  if(!deepDemo){deepDemo=true;
+    for(let i=0;i<40;i++){const a='0x'+Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');const L=Math.random()<.55,sz=(5+Math.random()*Math.random()*900)*(L?1:-1),entry=base*(1+(Math.random()-.5)*.08),lev=[3,5,10,20,25,40][Math.floor(Math.random()*6)];
+      const liq=L?entry*(1-1/lev*.9):entry*(1+1/lev*.9);HL.top.push(a);HL.st.set(a,{cur:{szi:sz,entry,liq,pnl:(base-entry)*sz,lev,val:Math.abs(sz)*base},acct:Math.abs(sz)*base/lev*1.5,t})}
+    HL.src='DEMO';
+    const chain=[];const exps=[1,2,5,12,26,54,89,180].map(d=>t+d*864e5);exps.forEach(e=>{const dd=new Date(e);const code=dd.getUTCDate()+['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][dd.getUTCMonth()]+String(dd.getUTCFullYear()).slice(2);
+      for(let K=Math.round(base*.6/1000)*1000;K<=base*1.5;K+=1000){const m=Math.abs(K/base-1);['C','P'].forEach(cp=>{const oi=Math.max(0,(cp==='C'?(K>base?1:.4):(K<base?1:.4))*900*Math.exp(-m*8)*(1+Math.random())*(K%5000===0?2.2:1));chain.push({instrument_name:`BTC-${code}-${K}-${cp}`,open_interest:oi,mark_iv:45+m*40+(e-t)/864e5*.03,underlying_price:base,volume:oi*.1*Math.random()})})}});
+    OP.chain=chain;OP.t=t;OP.res=computeGex(chain,base);OP.dvol=47.3;
+    ST.assets=[['USDT',184e9],['USDC',76e9],['USDe',9.8e9],['DAI',5.1e9],['USDS',4.4e9],['FDUSD',1.6e9]].map(([s,v])=>({symbol:s,pegType:'peggedUSD',circulating:{peggedUSD:v},circulatingPrevDay:{peggedUSD:v*(1-(Math.random()-.3)*.004)},circulatingPrevWeek:{peggedUSD:v*(1-(Math.random()-.2)*.015)},circulatingPrevMonth:{peggedUSD:v*(1-(Math.random()-.1)*.05)},chainCirculating:s==='USDT'?{Tron:{current:{peggedUSD:v*.44}},Ethereum:{current:{peggedUSD:v*.41}},Solana:{current:{peggedUSD:v*.05}},'BSC':{current:{peggedUSD:v*.04}},Arbitrum:{current:{peggedUSD:v*.02}},Other:{current:{peggedUSD:v*.04}}}:null}));ST.t=t;
+    RFX.usdjpy=150.2;RFX.krwUsdt=1395;RFX.fxSrc='DEMO';
+    REC=[];for(let i=672;i>=1;i--){const tt=t-i*900e3,p=base*(1+Math.sin(i/90)*.04+Math.sin(i/13)*.006);REC.push({t:tt,px:p,fx:150,okx:{oi:24000+Math.sin(i/70)*900},hl:{oi:31000+Math.sin(i/50)*1200,fr:.0000125+Math.sin(i/40)*.00001,wl:9e8+Math.sin(i/60)*2e8,ws:7e8+Math.cos(i/45)*1.5e8},drb:{oi:11000,gex:4e7*Math.sin(i/80)+1e7,flip:p*(1-Math.sin(i/80)*.02),dvol:45+Math.sin(i/100)*6},prem:{cb:Math.sin(i/30)*3,kimchi:120+Math.sin(i/120)*80},st:{total:2.9e11+i*-2e6}})}}
+  /* live-ish demo ticks */
+  const drift=Math.sin(t/20000)*8;
+  Object.keys(RV).forEach((v,j)=>{const lag=j*180+Math.random()*120,p=base*(1+(drift+(v==='upbit'?140:v==='bitbank'?25:v==='coinbase'?-3:0))/1e4)+(Math.random()-.5)*6;RADAR.tick(v,p,t-lag)});
+  if(Math.random()<.04){const sh=(Math.random()<.5?-1:1)*base*.0025;Object.keys(RV).forEach((v,j)=>setTimeout(()=>RADAR.tick(v,(RADAR.last[v]||base)+sh,Date.now()),j*350+Math.random()*200))}
+  if(Math.random()<.15){const a=HL.top[Math.floor(Math.random()*HL.top.length)],s=HL.st.get(a);if(s&&s.cur){const k=['積み増し','減らし'][Math.floor(Math.random()*2)];hlEvent(a,k,s.cur.szi*.2*(k==='減らし'?-1:1),base)}}
+  if(Math.random()<.2){const a=HL.top[Math.floor(Math.random()*HL.top.length)],b='0x'+Math.random().toString(16).slice(2).padEnd(40,'0');HL.tr.unshift({t,px:base,sz:12+Math.random()*60,u:base*(12+Math.random()*60),side:Math.random()<.5?'B':'A',b:Math.random()<.5?a:b,s:Math.random()<.5?b:a});HL.tr=HL.tr.slice(0,40)}
+  if(Math.random()<.15&&OP.chain.length){const o=OP.chain[Math.floor(Math.random()*OP.chain.length)];const amt=Math.round(25+Math.random()*300);OP.trades.unshift({t,n:o.instrument_name,amt,prem:amt*base*.03,dir:Math.random()<.5?'buy':'sell',iv:o.mark_iv,blk:Math.random()<.3});OP.trades=OP.trades.slice(0,50)}
+  if(Math.random()<.05){ST.mint.unshift({blk:23500000+Math.floor((t-T0)/12000),tx:'0x'+Math.random().toString(16).slice(2).padEnd(64,'a'),sym:Math.random()<.6?'USDT':'USDC',kind:Math.random()<.75?'発行':'償却',amt:[1e8,2.5e8,5e8,1e9][Math.floor(Math.random()*4)]});ST.tip=23500000+Math.floor((t-T0)/12000)}
+},1000);
+setInterval(()=>{if(MODE==='DEMO'&&OP.chain.length)OP.res=computeGex(OP.chain,nowPx())},15e3);
+
+/* ---------------- 描画ループ ---------------- */
+setInterval(()=>{
+  if(visible('v-whale'))renderWhale();
+  if(visible('v-opt'))renderOpt();
+  if(visible('v-lead'))renderLead();
+  if(visible('v-money'))renderMoney();
+},1000);
+
+function resetDeep(){HL.top=[];HL.st.clear();HL.ev=[];HL.tr=[];HL.src='';hlBooted=false;OP.chain=[];OP.res=null;OP.trades=[];ST.assets=null;ST.t=0;ST.mint=[];REC=null;loadRec();for(const k in RADAR.buf)delete RADAR.buf[k];RADAR.ev=[];RADAR.lead={};RADAR.lag={};RADAR.cnt=0;PREM.length=0;deepDemo=false;loadFx()}
 /* ---------- クロちゃん用コピー ---------- */
 function snapText(){
   const t=Date.now(),px=pxRef(),L=[];
